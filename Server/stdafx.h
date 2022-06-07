@@ -13,6 +13,38 @@
 
 #define SERVER_PORT          9000
 
+#define INPUT_MASK_NONE		 0x0000
+#define INPUT_MASK_W	     0x0001
+#define INPUT_MASK_S         0x0002
+#define INPUT_MASK_A         0x0004
+#define INPUT_MASK_D         0x0008
+#define INPUT_MASK_F		 0x0010
+#define INPUT_MASK_SHIFT     0x0020
+#define INPUT_MASK_TAB       0x0040
+#define INPUT_MASK_LMB       0x0080
+#define INPUT_MASK_RMB       0x0100
+
+enum OBJECT_TYPE
+{
+	OBJECT_TYPE_PLAYER,
+	OBJECT_TYPE_NPC,
+	OBJECT_TYPE_TERRAIN,
+	OBJECT_TYPE_STRUCTURE
+};
+
+enum WEAPON_TYPE
+{
+	WEAPON_TYPE_PUNCH,
+	WEAPON_TYPE_PISTOL
+};
+
+enum ANIMATION_TYPE
+{
+	ANIMATION_TYPE_LOOP,
+	ANIMATION_TYPE_ONCE,
+	ANIMATION_TYPE_ONCE_REVERSE
+};
+
 // Windows 헤더 파일
 #include <winsock2.h>
 
@@ -26,8 +58,9 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <cmath>
-#include <ctime>
+#include <vector>
+#include <unordered_map>
+#include <queue>
 using namespace std;
 
 // DirectX Header
@@ -65,26 +98,34 @@ struct SOCKET_INFO
 	bool	    m_Completed{};
 };
 
+struct LIGHT
+{
+	bool	   m_IsActive{};
+
+	XMFLOAT3   m_Position{};
+	XMFLOAT3   m_Direction{};
+
+	float      m_SpotLightAngle{};
+};
+
 struct CLIENT_TO_SERVER_DATA
 {
+	UINT	   m_SceneState{};
+
 	UINT	   m_InputMask{};
 	XMFLOAT4X4 m_WorldMatrix{};
 };
 
 struct SERVER_TO_CLIENT_DATA
 {
+	XMFLOAT4X4 m_PlayerWorldMatrices[MAX_CLIENT_CAPACITY]{};
+	XMFLOAT4X4 m_NPCWorldMatrices[10]{};
+
+	XMFLOAT3   m_TowerLightDirection{};
+
 	// 1. Scene's State - UINT
-
-	XMFLOAT4X4 m_PlayerWorldMatrice[MAX_CLIENT_CAPACITY]{};
-	XMFLOAT4X4 m_NPCWorldMatrice[10]{};
-
 	// 3. All Object's Current State - UINT[]
-
 	// 4. UI and Trigger's Activation Condition - bool
-	// 5. Tower's LightAngle - float
-	
-	float LightAngle{};
-
 	// 6. Sound Play Condition and Volume - bool and float
 };
 
@@ -164,4 +205,10 @@ namespace Matrix4x4
 
 	XMFLOAT4X4 LookAtLH(const XMFLOAT3& Position, const XMFLOAT3& FocusPosition, const XMFLOAT3& UpDirection);
 	XMFLOAT4X4 LookToLH(const XMFLOAT3& Position, const XMFLOAT3& Look, const XMFLOAT3& WorldUp);
+}
+
+namespace Server
+{
+	void ErrorQuit(const char* Msg);
+	void ErrorDisplay(const char* Msg);
 }

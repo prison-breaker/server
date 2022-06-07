@@ -127,14 +127,42 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AnimationController.h" />
+    <ClInclude Include="EventTrigger.h" />
+    <ClInclude Include="EventTriggers.h" />
+    <ClInclude Include="GameObject.h" />
+    <ClInclude Include="Guard.h" />
+    <ClInclude Include="Mesh.h" />
+    <ClInclude Include="NavMesh.h" />
+    <ClInclude Include="NavNode.h" />
+    <ClInclude Include="Player.h" />
     <ClInclude Include="Server.h" />
+    <ClInclude Include="State.h" />
+    <ClInclude Include="StateMachine.h" />
+    <ClInclude Include="State_Guard.h" />
+    <ClInclude Include="State_Player.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="Timer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AnimationController.cpp" />
+    <ClCompile Include="EventTrigger.cpp" />
+    <ClCompile Include="EventTriggers.cpp" />
+    <ClCompile Include="GameObject.cpp" />
+    <ClCompile Include="Guard.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Mesh.cpp" />
+    <ClCompile Include="NavMesh.cpp" />
+    <ClCompile Include="NavNode.cpp" />
+    <ClCompile Include="Player.cpp" />
     <ClCompile Include="Server.cpp" />
+    <ClCompile Include="State.cpp" />
+    <ClCompile Include="StateMachine.cpp" />
+    <ClCompile Include="State_Guard.cpp" />
+    <ClCompile Include="State_Player.cpp" />
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="Timer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
