@@ -79,9 +79,6 @@ public:
 	void SetAnimationController(const shared_ptr<LOADED_MODEL_INFO>& ModelInfo);
 	shared_ptr<CAnimationController> GetAnimationController() const;
 
-	void SetAnimationClip(UINT ClipNum);
-	UINT GetAnimationClip() const;
-
 	void SetBoundingBox(const shared_ptr<BoundingBox>& BoundingBox);
 	shared_ptr<BoundingBox> GetBoundingBox() const;
 

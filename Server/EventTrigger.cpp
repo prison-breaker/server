@@ -18,7 +18,6 @@ void CEventTrigger::LoadEventTriggerFromFile(tifstream& InFile)
 {
 	tstring Token{};
 
-#ifdef READ_BINARY_FILE
 	while (true)
 	{
 		File::ReadStringFromFile(InFile, Token);
@@ -33,8 +32,6 @@ void CEventTrigger::LoadEventTriggerFromFile(tifstream& InFile)
 			break;
 		}
 	}
-#else
-#endif
 }
 
 void CEventTrigger::SetActive(bool IsActive)

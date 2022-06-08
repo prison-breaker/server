@@ -35,7 +35,7 @@ private:
 
 	shared_ptr<CGameObject>					m_Owner{};
 
-	UINT									m_ClipNum{};
+	ANIMATION_CLIP_TYPE						m_ClipType{};
 	vector<shared_ptr<CAnimationClip>>	    m_AnimationClips{};
 
 	UINT							        m_KeyFrameIndex{};
@@ -52,8 +52,8 @@ public:
 	void SetActive(bool IsActive);
 	bool IsActive() const;
 
-	void SetAnimationClip(UINT ClipNum);
-	UINT GetAnimationClip() const;
+	void SetAnimationClipType(ANIMATION_CLIP_TYPE ClipType);
+	ANIMATION_CLIP_TYPE GetAnimationClipType() const;
 
 	void SetKeyFrameIndex(UINT KeyFrameIndex);
 	UINT GetKeyFrameIndex() const;

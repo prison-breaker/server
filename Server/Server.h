@@ -12,6 +12,8 @@ public:
 	static shared_ptr<CNavMesh>				       m_NavMesh;
 	static vector<LIGHT>						   m_Lights;
 
+	static SERVER_TO_CLIENT_DATA                   m_SendedPacketData;
+
 private:
 	bool		                                   m_GameStart{};
 											       
@@ -33,7 +35,6 @@ private:
 	unique_ptr<CTimer>							   m_Timer{};
 	
 	CLIENT_TO_SERVER_DATA						   m_ReceivedPacketData[MAX_CLIENT_CAPACITY]{};
-	SERVER_TO_CLIENT_DATA                          m_SendedPacketData{};
 
 public:
 	CServer();
@@ -60,6 +61,7 @@ public:
 	void GameLoop();
 
 	void UpdatePlayerInfo();
+	void Animate(float ElapsedTime);
 	void CalculateTowerLightCollision();
 
 	void UpdateSendedPacketData();

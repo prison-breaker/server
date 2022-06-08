@@ -125,7 +125,6 @@ void CGameObject::LoadAnimationInfoFromFile(tifstream& InFile, const shared_ptr<
 
 	unordered_map<tstring, shared_ptr<CGameObject>> BoneFrameCaches{};
 
-#ifdef READ_BINARY_FILE
 	while (true)
 	{
 		File::ReadStringFromFile(InFile, Token);
@@ -185,69 +184,6 @@ void CGameObject::LoadAnimationInfoFromFile(tifstream& InFile, const shared_ptr<
 			break;
 		}
 	}
-
-#else
-	while (InFile >> Token)
-	{
-		if (Token == TEXT("<FrameNames>"))
-		{
-			UINT SkinnedMeshFrameCount{};
-
-			InFile >> SkinnedMeshFrameCount;
-			ModelInfo->m_SkinnedMeshCaches.reserve(SkinnedMeshFrameCount);
-			ModelInfo->m_BoneFrameCaches.resize(SkinnedMeshFrameCount);
-
-			for (UINT i = 0; i < SkinnedMeshFrameCount; ++i)
-			{
-				InFile >> Token;
-				ModelInfo->m_SkinnedMeshCaches.push_back(ModelInfo->m_Model->FindSkinnedMesh(Token));
-
-				UINT BoneCount{};
-
-				InFile >> BoneCount;
-				ModelInfo->m_BoneFrameCaches[i].reserve(BoneCount);
-
-				for (UINT j = 0; j < BoneCount; ++j)
-				{
-					InFile >> Token;
-					
-					if (BoneFrameCaches.count(Token))
-					{
-						ModelInfo->m_BoneFrameCaches[i].push_back(BoneFrameCaches[Token]);
-					}
-					else
-					{
-						shared_ptr<CGameObject> Frame{ ModelInfo->m_Model->FindFrame(Token) };
-
-						ModelInfo->m_BoneFrameCaches[i].push_back(Frame);
-						BoneFrameCaches.emplace(Token, Frame);
-					}
-				}
-
-				ModelInfo->m_SkinnedMeshCaches.back()->SetBoneFrameCaches(ModelInfo->m_BoneFrameCaches[i]);
-			}
-		}
-		else if (Token == TEXT("<AnimationClips>"))
-		{
-			UINT AnimationClipCount{};
-
-			InFile >> AnimationClipCount;
-			ModelInfo->m_AnimationClips.reserve(AnimationClipCount);
-
-			for (UINT i = 0; i < AnimationClipCount; ++i)
-			{
-				shared_ptr<CAnimationClip> AnimationClip{ make_shared<CAnimationClip>() };
-
-				AnimationClip->LoadAnimationClipInfoFromFile(InFile, ModelInfo);
-				ModelInfo->m_AnimationClips.push_back(AnimationClip);
-			}
-		}
-		else if (Token == TEXT("</Animation>"))
-		{
-			break;
-		}
-	}
-#endif
 }
 
 void CGameObject::Initialize()
@@ -472,24 +408,6 @@ void CGameObject::SetAnimationController(const shared_ptr<LOADED_MODEL_INFO>& Mo
 shared_ptr<CAnimationController> CGameObject::GetAnimationController() const
 {
 	return m_AnimationController;
-}
-
-void CGameObject::SetAnimationClip(UINT ClipNum)
-{
-	if (m_AnimationController)
-	{
-		m_AnimationController->SetAnimationClip(ClipNum);
-	}
-}
-
-UINT CGameObject::GetAnimationClip() const
-{
-	if (m_AnimationController)
-	{
-		return m_AnimationController->GetAnimationClip();
-	}
-
-	return 0;
 }
 
 void CGameObject::SetBoundingBox(const shared_ptr<BoundingBox>& BoundingBox)
