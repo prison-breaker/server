@@ -393,15 +393,13 @@ bool CServer::RegisterPlayer(SOCKET Socket, const SOCKADDR_IN& SocketAddress)
     m_ClientSocketInfos[ValidID].m_Socket = Socket;
     m_ClientSocketInfos[ValidID].m_SocketAddress = SocketAddress;
 
-    SetEvent(m_ClientSyncEvents[ValidID]);
-
     return true;
 }
 
 void CServer::RemovePlayer(UINT ID)
 {
     closesocket(m_ClientSocketInfos[ID].m_Socket);
-    ResetEvent(m_ClientSyncEvents[ID]);
+    SetEvent(m_ClientSyncEvents[ID]);
 
     m_ClientSocketInfos[ID].m_Socket = NULL;
 
