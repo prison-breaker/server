@@ -10,6 +10,11 @@ SERVER_TO_CLIENT_DATA                   CServer::m_SendedPacketData{};
 
 CServer::CServer()
 {
+    m_Timer = make_unique<CTimer>();
+
+    BuildObjects();
+    BuildLights();
+
     WSADATA WsaData{};
 
     if (WSAStartup(MAKEWORD(2, 2), &WsaData))
@@ -53,11 +58,6 @@ CServer::CServer()
     {
         CloseHandle(hThread);
     }
-
-    m_Timer = make_unique<CTimer>();
-
-    BuildObjects();
-    BuildLights();
 }
 
 CServer::~CServer()
@@ -117,8 +117,7 @@ DWORD WINAPI CServer::ProcessClient(LPVOID Arg)
 
     // 최초로 클라이언트에게 초기화된 플레이어의 아이디를 보낸다.
     int ReturnValue{ send(ClientSocket, (char*)&ClientID, sizeof(UINT), 0) };
-
-    tcout << "지금 연결된 클라이언트의 아이디 : " << ClientID << endl;
+    MSG_TYPE MsgType{};
 
     if (ReturnValue == SOCKET_ERROR)
     {
@@ -130,8 +129,8 @@ DWORD WINAPI CServer::ProcessClient(LPVOID Arg)
         {
             WaitForSingleObject(Server->m_MainSyncEvents[0], INFINITE);
 
-            // 패킷 데이터를 수신한다.
-            ReturnValue = recv(ClientSocket, (char*)&Server->m_ReceivedPacketData[ClientID], sizeof(CLIENT_TO_SERVER_DATA), MSG_WAITALL);
+            // 메세지 패킷 데이터를 수신한다.
+            ReturnValue = recv(ClientSocket, (char*)&MsgType, sizeof(MsgType), MSG_WAITALL);
 
             if (ReturnValue == SOCKET_ERROR)
             {
@@ -143,15 +142,36 @@ DWORD WINAPI CServer::ProcessClient(LPVOID Arg)
                 break;
             }
 
-            SetEvent(Server->m_ClientSyncEvents[ClientID]);
-            WaitForSingleObject(Server->m_MainSyncEvents[1], INFINITE);
-
-            ReturnValue = send(ClientSocket, (char*)&Server->m_SendedPacketData, sizeof(SERVER_TO_CLIENT_DATA), 0);
-
-            if (ReturnValue == SOCKET_ERROR)
+            if (MsgType == MSG_TYPE_TITLE)
             {
-                Server::ErrorDisplay("send()");
-                break;
+                SetEvent(Server->m_ClientSyncEvents[ClientID]);
+                WaitForSingleObject(Server->m_MainSyncEvents[1], INFINITE);
+            }
+
+            if (MsgType & MSG_TYPE_NORMAL)
+            {
+                ReturnValue = recv(ClientSocket, (char*)&Server->m_ReceivedPacketData[ClientID], sizeof(Server->m_ReceivedPacketData[ClientID]), MSG_WAITALL);
+
+                if (ReturnValue == SOCKET_ERROR)
+                {
+                    Server::ErrorDisplay("recv()");
+                    break;
+                }
+                else if (ReturnValue == 0)
+                {
+                    break;
+                }
+
+                SetEvent(Server->m_ClientSyncEvents[ClientID]);
+                WaitForSingleObject(Server->m_MainSyncEvents[1], INFINITE);
+
+                ReturnValue = send(ClientSocket, (char*)&Server->m_SendedPacketData, sizeof(Server->m_SendedPacketData), 0);
+
+                if (ReturnValue == SOCKET_ERROR)
+                {
+                    Server::ErrorDisplay("send()");
+                    break;
+                }
             }
         }
     }
@@ -271,6 +291,7 @@ void CServer::LoadSceneInfoFromFile(const tstring& FileName)
 
                 Architecture->SetChild(ModelInfo->m_Model);
                 Architecture->SetTransformMatrix(TransformMatrix);
+                Architecture->UpdateTransform(Matrix4x4::Identity());
                 Architecture->Initialize();
 
                 m_GameObjects[ObjectType].push_back(Architecture);
@@ -280,6 +301,11 @@ void CServer::LoadSceneInfoFromFile(const tstring& FileName)
         }
         else if (Token == TEXT("</GameScene>"))
         {
+            for (UINT i = 0; i < MAX_CLIENT_CAPACITY; ++i)
+            {
+                m_ReceivedPacketData[i].m_WorldMatrix = m_GameObjects[OBJECT_TYPE_PLAYER][i]->GetWorldMatrix();
+            }
+
             tcout << endl;
             break;
         }
@@ -393,15 +419,14 @@ void CServer::GameLoop()
         {
             if (m_ClientSocketInfos[i].m_Socket)
             {
-                WaitForSingleObject(m_ClientSyncEvents[i], 10);
+                WaitForSingleObject(m_ClientSyncEvents[i], INFINITE);
             }
         }
 
-        m_Timer->Tick(60.0f);
+        m_Timer->Tick(0.0f);
 
         UpdatePlayerInfo();
         Animate(m_Timer->GetElapsedTime());
-        CalculateTowerLightCollision();
         UpdateSendedPacketData();
 
         ResetEvent(m_MainSyncEvents[0]);
@@ -413,11 +438,6 @@ void CServer::UpdatePlayerInfo()
 {
     for (UINT i = 0; i < MAX_CLIENT_CAPACITY; ++i)
     {
-        if (m_ReceivedPacketData[i].m_SceneState == 0)
-        {
-            break;
-        }
-
         if (m_GameObjects[OBJECT_TYPE_PLAYER][i])
         {
             shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(m_GameObjects[OBJECT_TYPE_PLAYER][i]) };
@@ -434,13 +454,14 @@ void CServer::UpdatePlayerInfo()
 
 void CServer::Animate(float ElapsedTime)
 {
-    for (UINT i = OBJECT_TYPE_PLAYER; i <= OBJECT_TYPE_NPC; ++i)
+    for (UINT i = OBJECT_TYPE_PLAYER; i <= OBJECT_TYPE_STRUCTURE; ++i)
     {
         for (const auto& GameObject : m_GameObjects[i])
         {
             if (GameObject)
             {
                 GameObject->Animate(ElapsedTime);
+                GameObject->UpdateTransform(Matrix4x4::Identity());
             }
         }
     }
@@ -461,74 +482,75 @@ void CServer::CalculateTowerLightCollision()
 {
     if (m_Lights[0].m_IsActive)
 	{ 	
-		//// 광원 포지션과 방향벡터를 활용해 평면에 도달하는 중심점을 계산한다. 
-		//float LightAngle{ Vector3::Angle(m_Lights[0].m_Direction, XMFLOAT3(0.0f, -1.0f, 0.0f)) };  // 빗변과 변의 각도 계산
-		//float HypotenuseLength{ m_Lights[0].m_Position.y / cosf(XMConvertToRadians(LightAngle)) }; // 빗변의 길이 계산
-		//float Radian{ HypotenuseLength * tanf(XMConvertToRadians(10.0f)) };                        // 광원이 쏘아지는 원의 반지름
+		// 광원 포지션과 방향벡터를 활용해 평면에 도달하는 중심점을 계산한다. 
+		float LightAngle{ Vector3::Angle(m_Lights[0].m_Direction, XMFLOAT3(0.0f, -1.0f, 0.0f)) };  // 빗변과 변의 각도 계산
+		float HypotenuseLength{ m_Lights[0].m_Position.y / cosf(XMConvertToRadians(LightAngle)) }; // 빗변의 길이 계산
+		float Radian{ HypotenuseLength * tanf(XMConvertToRadians(10.0f)) };                        // 광원이 쏘아지는 원의 반지름
 
-		//// 평면에 도달하는 점 계산
-		//XMFLOAT3 LightedPosition{ Vector3::Add(m_Lights[0].m_Position , Vector3::ScalarProduct(HypotenuseLength, m_Lights[0].m_Direction, false)) };
+		// 평면에 도달하는 점 계산
+		XMFLOAT3 LightedPosition{ Vector3::Add(m_Lights[0].m_Position , Vector3::ScalarProduct(HypotenuseLength, m_Lights[0].m_Direction, false)) };
 
-		//for (const auto& Object : m_GameObjects[OBJECT_TYPE_PLAYER])
-		//{
-		//	shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(Object) };
-		//	if (Player)
-		//	{
-		//		if (Player->GetHealth() > 0)
-		//		{
-		//			if (Math::Distance(Player->GetPosition(), LightedPosition) < Radian)
-		//			{
-		//				XMFLOAT3 Direction = Vector3::Normalize(Vector3::Subtract(Player->GetPosition(), m_Lights[0].m_Position));
+		for (const auto& Object : m_GameObjects[OBJECT_TYPE_PLAYER])
+		{
+			shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(Object) };
 
-		//				float NearestHitDistance{ FLT_MAX };
-		//				float HitDistance{};
-		//				bool HitCheck{};
+			if (Player)
+			{
+				if (Player->GetHealth() > 0)
+				{
+					if (Math::Distance(Player->GetPosition(), LightedPosition) < Radian)
+					{
+						XMFLOAT3 Direction = Vector3::Normalize(Vector3::Subtract(Player->GetPosition(), m_Lights[0].m_Position));
 
-		//				for (const auto& GameObject : m_GameObjects[OBJECT_TYPE_STRUCTURE])
-		//				{
-		//					if (GameObject)
-		//					{
-		//						shared_ptr<CGameObject> IntersectedObject{ GameObject->PickObjectByRayIntersection(m_Lights[0].m_Position, Direction, HitDistance, HypotenuseLength) };
+						float NearestHitDistance{ FLT_MAX };
+						float HitDistance{};
+						bool HitCheck{};
 
-		//						if (IntersectedObject && HitDistance < HypotenuseLength)
-		//						{
-		//							HitCheck = true;
-		//							break;
-		//						}
-		//					}
-		//				}
+						for (const auto& GameObject : m_GameObjects[OBJECT_TYPE_STRUCTURE])
+						{
+							if (GameObject)
+							{
+								shared_ptr<CGameObject> IntersectedObject{ GameObject->PickObjectByRayIntersection(m_Lights[0].m_Position, Direction, HitDistance, HypotenuseLength) };
 
-		//				if (!HitCheck)
-		//				{
-		//					for (const auto& GameObject : m_GameObjects[OBJECT_TYPE_NPC])
-		//					{
-		//						if (GameObject)
-		//						{
-		//							shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(GameObject) };
+								if (IntersectedObject && HitDistance < HypotenuseLength)
+								{
+									HitCheck = true;
+									break;
+								}
+							}
+						}
 
-		//							if (Guard->GetHealth() > 0)
-		//							{
-		//								// 스팟조명과 충돌 할 경우 주변 범위에 있는 경찰들이 플레이어를 쫒기 시작한다.
-		//								if (Math::Distance(LightedPosition, Guard->GetPosition()) <= 150.0f)
-		//								{
-		//									if (Guard->GetStateMachine()->IsInState(CGuardIdleState::GetInstance()) ||
-		//										Guard->GetStateMachine()->IsInState(CGuardPatrolState::GetInstance()) ||
-		//										Guard->GetStateMachine()->IsInState(CGuardReturnState::GetInstance()))
-		//									{
-		//										Guard->FindNavPath(m_NavMesh, Player->GetPosition(), m_GameObjects);
-		//										Guard->GetStateMachine()->ChangeState(CGuardAssembleState::GetInstance());
-		//									}
-		//								}
-		//							}
-		//						}
-		//					}
+						if (!HitCheck)
+						{
+							for (const auto& GameObject : m_GameObjects[OBJECT_TYPE_NPC])
+							{
+								if (GameObject)
+								{
+									shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(GameObject) };
 
-		//					return;
-		//				}
-		//			}
-		//		}
-		//	}
-		//}
+									if (Guard->GetHealth() > 0)
+									{
+										// 스팟조명과 충돌 할 경우 주변 범위에 있는 경찰들이 플레이어를 쫒기 시작한다.
+										if (Math::Distance(LightedPosition, Guard->GetPosition()) <= 150.0f)
+										{
+											if (Guard->GetStateMachine()->IsInState(CGuardIdleState::GetInstance()) ||
+												Guard->GetStateMachine()->IsInState(CGuardPatrolState::GetInstance()) ||
+												Guard->GetStateMachine()->IsInState(CGuardReturnState::GetInstance()))
+											{
+												Guard->FindNavPath(m_NavMesh, Player->GetPosition(), m_GameObjects);
+												Guard->GetStateMachine()->ChangeState(CGuardAssembleState::GetInstance());
+											}
+										}
+									}
+								}
+							}
+
+							return;
+						}
+					}
+				}
+			}
+		}
 
         m_Lights[0].m_SpotLightAngle += m_Timer->GetElapsedTime();
 		m_Lights[0].m_Direction = Vector3::Normalize(XMFLOAT3(cosf(m_Lights[0].m_SpotLightAngle), -1.0f, sinf(m_Lights[0].m_SpotLightAngle)));
@@ -539,16 +561,15 @@ void CServer::UpdateSendedPacketData()
 {
     for (UINT i = 0; i < MAX_CLIENT_CAPACITY; ++i)
     {
-        shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(m_GameObjects[OBJECT_TYPE_PLAYER][i]) };
-
-        m_SendedPacketData.m_PlayerWorldMatrices[i] = Player->GetWorldMatrix();
-        m_SendedPacketData.m_PlayerAnimationClipTypes[i] = Player->GetAnimationController()->GetAnimationClipType();
+        m_SendedPacketData.m_PlayerWorldMatrices[i] = m_GameObjects[OBJECT_TYPE_PLAYER][i]->GetWorldMatrix();
+        m_SendedPacketData.m_PlayerAnimationClipTypes[i] = m_GameObjects[OBJECT_TYPE_PLAYER][i]->GetAnimationController()->GetAnimationClipType();
     }
 
-    //for (UINT i = 0; i < 10; ++i)
-    //{
-    //    m_SendedPacketData.m_NPCWorldMatrices[i] = m_GameObjects[OBJECT_TYPE_NPC][i]->GetWorldMatrix();
-    //}
+    for (UINT i = 0; i < MAX_NPC_COUNT; ++i)
+    {
+        m_SendedPacketData.m_NPCWorldMatrices[i] = m_GameObjects[OBJECT_TYPE_NPC][i]->GetWorldMatrix();
+        m_SendedPacketData.m_NPCAnimationClipTypes[i] = m_GameObjects[OBJECT_TYPE_NPC][i]->GetAnimationController()->GetAnimationClipType();
+    }
 
-    //m_SendedPacketData.m_TowerLightDirection = m_Lights[0].m_Direction;
+    m_SendedPacketData.m_TowerLightDirection = m_Lights[0].m_Direction;
 }

@@ -83,8 +83,7 @@ bool CMesh::CheckRayIntersection(const XMFLOAT3& RayOrigin, const XMFLOAT3& RayD
 {
 	bool Intersected{};
 
-	// -1: BoundBox
-	UINT SubMeshCount{ static_cast<UINT>(m_Indices.size() - 1) };
+	UINT SubMeshCount{ static_cast<UINT>(m_Indices.size()) };
 	float NearestHitDistance{ FLT_MAX };
 
 	for (UINT i = 0; i < SubMeshCount; ++i)

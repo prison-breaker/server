@@ -29,7 +29,6 @@ private:
 	HANDLE										   m_MainSyncEvents[2]{};
 	HANDLE										   m_ClientSyncEvents[MAX_CLIENT_CAPACITY]{};
 
-	// 가장 최근에 접속한 클라이언트의 인덱스  
 	UINT									       m_RecentClientID{};
 
 	unique_ptr<CTimer>							   m_Timer{};

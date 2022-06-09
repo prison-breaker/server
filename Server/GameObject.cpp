@@ -74,25 +74,6 @@ shared_ptr<CGameObject> CGameObject::LoadModelInfoFromFile(tifstream& InFile, un
 			NewObject->SetMesh(SkinnedMesh);
 			NewObject->SetBoundingBox(make_shared<BoundingBox>());
 		}
-		//else if (Token == TEXT("<Materials>"))
-		//{
-		//	UINT MaterialCount{ File::ReadIntegerFromFile(InFile) };
-
-		//	if (MaterialCount > 0)
-		//	{
-		//		NewObject->m_Materials.reserve(MaterialCount);
-
-		//		// <Material>
-		//		File::ReadStringFromFile(InFile, Token);
-
-		//		for (UINT i = 0; i < MaterialCount; ++i)
-		//		{
-		//			File::ReadStringFromFile(InFile, Token);
-
-		//			NewObject->SetMaterial(MaterialCaches[Token]);
-		//		}
-		//	}
-		//}
 		else if (Token == TEXT("<ChildCount>"))
 		{
 			UINT ChildCount{ File::ReadIntegerFromFile(InFile) };

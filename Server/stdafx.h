@@ -25,10 +25,10 @@
 #define INPUT_MASK_LMB       0x0080
 #define INPUT_MASK_RMB       0x0100
 
-enum SCENE_TYPE
+enum MSG_TYPE
 {
-	SCENE_TYPE_TITLE,
-	SCENE_TYPE,INGAME
+	MSG_TYPE_TITLE,
+	MSG_TYPE_NORMAL,
 };
 
 enum OBJECT_TYPE
@@ -139,8 +139,6 @@ struct LIGHT
 
 struct CLIENT_TO_SERVER_DATA
 {
-	UINT	   m_SceneState{};
-
 	UINT	   m_InputMask{};
 	XMFLOAT4X4 m_WorldMatrix{};
 };
