@@ -83,7 +83,7 @@ void CPowerDownEventTrigger::InteractEventTrigger()
 			CServer::m_CompletedTriggers |= MSG_TYPE_TRIGGER_POWER_DOWN_TOWER;
 
 			// 감시탑의 조명을 끈다.
-			CServer::m_Lights[1].m_IsActive = false;
+			CServer::m_Lights[0].m_IsActive = false;
 
 			// 감시탑의 전원을 차단했다면, 현재 이벤트 트리거를 삭제한다.
 			DeleteThisEventTrigger();
