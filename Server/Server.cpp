@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "Server.h"
 
+MSG_TYPE								CServer::m_MsgType{};
+MSG_TYPE								CServer::m_CompletedTriggers{};
+
 vector<vector<shared_ptr<CGameObject>>> CServer::m_GameObjects{};
 vector<shared_ptr<CEventTrigger>>       CServer::m_EventTriggers{};
 shared_ptr<CNavMesh>                    CServer::m_NavMesh{};
@@ -142,13 +145,12 @@ DWORD WINAPI CServer::ProcessClient(LPVOID Arg)
                 break;
             }
 
-            if (MsgType == MSG_TYPE_TITLE)
+            if (MsgType & MSG_TYPE_TITLE)
             {
                 SetEvent(Server->m_ClientSyncEvents[ClientID]);
                 WaitForSingleObject(Server->m_MainSyncEvents[1], INFINITE);
             }
-
-            if (MsgType & MSG_TYPE_NORMAL)
+            else if (MsgType & MSG_TYPE_INGAME)
             {
                 ReturnValue = recv(ClientSocket, (char*)&Server->m_ReceivedPacketData[ClientID], sizeof(Server->m_ReceivedPacketData[ClientID]), MSG_WAITALL);
 
@@ -362,7 +364,127 @@ void CServer::LoadNavMeshFromFile(const tstring& FileName)
 
 void CServer::LoadEventTriggerFromFile(const tstring& FileName)
 {
+    tstring Token{};
+    shared_ptr<CEventTrigger> EventTrigger{};
 
+    tcout << FileName << TEXT(" 로드 시작...") << endl;
+
+    tifstream InFile{ FileName, ios::binary };
+
+    while (true)
+    {
+        File::ReadStringFromFile(InFile, Token);
+
+        if (Token == TEXT("<EventTriggers>"))
+        {
+            UINT TriggerCount{ File::ReadIntegerFromFile(InFile) };
+
+            m_EventTriggers.reserve(TriggerCount);
+        }
+        else if (Token == TEXT("<EventTrigger>"))
+        {
+            // <Type>
+            File::ReadStringFromFile(InFile, Token);
+
+            UINT TriggerType{ File::ReadIntegerFromFile(InFile) };
+
+            switch (TriggerType)
+            {
+            case 0:
+                EventTrigger = make_shared<COpenDoorEventTrigger>();
+                break;
+            case 1:
+                EventTrigger = make_shared<CPowerDownEventTrigger>();
+                break;
+            case 2:
+                EventTrigger = make_shared<CSirenEventTrigger>();
+                break;
+            case 3:
+                EventTrigger = make_shared<COpenGateEventTrigger>();
+                break;
+            }
+
+            EventTrigger->LoadEventTriggerFromFile(InFile);
+
+            // <TargetRootIndex>
+            File::ReadStringFromFile(InFile, Token);
+
+            UINT TargetRootIndex{ File::ReadIntegerFromFile(InFile) };
+
+            // <TargetObject>
+            File::ReadStringFromFile(InFile, Token);
+
+            UINT TargetObjectCount{ File::ReadIntegerFromFile(InFile) };
+
+            if (TargetObjectCount > 0)
+            {
+                for (UINT i = 0; i < TargetObjectCount; ++i)
+                {
+                    File::ReadStringFromFile(InFile, Token);
+
+                    shared_ptr<CGameObject> TargetObject{ m_GameObjects[OBJECT_TYPE_STRUCTURE][TargetRootIndex]->FindFrame(Token) };
+
+                    EventTrigger->InsertEventObject(TargetObject);
+                }
+            }
+
+            m_EventTriggers.push_back(EventTrigger);
+        }
+        else if (Token == TEXT("</EventTriggers>"))
+        {
+            break;
+        }
+    }
+
+    tcout << FileName << TEXT(" 로드 완료...") << endl << endl;
+
+    //// 권총을 드롭하는 트리거를 추가한다.
+    //// 권총은 열쇠를 갖지 않은 임의의 교도관(Index: 2 ~ 14) 중 5명이 보유하고 있다.
+    //vector<UINT> Indices{};
+
+    //Indices.resize(m_GameObjects[OBJECT_TYPE_NPC].size() - 2);
+    //iota(Indices.begin(), Indices.end(), 2);
+    //shuffle(Indices.begin(), Indices.end(), default_random_engine{ random_device{}() });
+
+    //for (UINT i = 0; i < 5; ++i)
+    //{
+    //    if (m_GameObjects[OBJECT_TYPE_NPC][Indices[i]])
+    //    {
+    //        shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(m_GameObjects[OBJECT_TYPE_NPC][Indices[i]]) };
+
+    //        EventTrigger = make_shared<CGetPistolEventTrigger>();
+    //        Guard->SetEventTrigger(EventTrigger);
+
+    //        m_EventTriggers.push_back(EventTrigger);
+    //    }
+    //}
+
+    //// 열쇠를 드롭하는 트리거를 추가한다.
+    //// 열쇠는 외형이 다른 교도관(Index: 0, 1)이 보유하고 있다.
+    //for (UINT i = 0; i < 2; ++i)
+    //{
+    //    if (m_GameObjects[OBJECT_TYPE_NPC][i])
+    //    {
+    //        shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(m_GameObjects[OBJECT_TYPE_NPC][i]) };
+
+    //        EventTrigger = make_shared<CGetKeyEventTrigger>();
+    //        Guard->SetEventTrigger(EventTrigger);
+
+    //        m_EventTriggers.push_back(EventTrigger);
+    //    }
+    //}
+
+    //// 모든 트리거 객체는 상호작용 UI 객체를 공유한다.
+    //UINT TriggerCount{ static_cast<UINT>(m_EventTriggers.size()) };
+
+    //for (const auto& EventTrigger : m_EventTriggers)
+    //{
+    //    if (EventTrigger)
+    //    {
+    //        // [BILBOARD_OBJECT_TYPE_UI][9]: InteractionUI
+    //        EventTrigger->SetInteractionUI(m_BilboardObjects[BILBOARD_OBJECT_TYPE_UI][9]);
+    //    }
+    //}
 }
 
 UINT CServer::GetValidClientID() const
@@ -464,14 +586,14 @@ void CServer::Animate(float ElapsedTime)
         }
     }
 
-    //// 상호작용이 일어난 모든 트리거의 작업을 수행한다.
-    //for (const auto& EventTrigger : m_EventTriggers)
-    //{
-    //    if (EventTrigger)
-    //    {
-    //        EventTrigger->Update(ElapsedTime);
-    //    }
-    //}
+    // 상호작용이 일어난 모든 트리거의 작업을 수행한다.
+    for (const auto& EventTrigger : m_EventTriggers)
+    {
+        if (EventTrigger)
+        {
+            EventTrigger->Update(ElapsedTime);
+        }
+    }
 
     CalculateTowerLightCollision();
 }
@@ -557,6 +679,9 @@ void CServer::CalculateTowerLightCollision()
 
 void CServer::UpdateSendedPacketData()
 {
+    m_SendedPacketData.m_MsgType = m_MsgType;
+    m_MsgType = MSG_TYPE_NONE;
+
     for (UINT i = 0; i < MAX_CLIENT_CAPACITY; ++i)
     {
         m_SendedPacketData.m_PlayerWorldMatrices[i] = m_GameObjects[OBJECT_TYPE_PLAYER][i]->GetWorldMatrix();

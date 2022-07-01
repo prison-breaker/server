@@ -27,9 +27,23 @@
 
 enum MSG_TYPE
 {
-	MSG_TYPE_TITLE,
-	MSG_TYPE_NORMAL,
+	MSG_TYPE_NONE                        = 0x0000,
+	MSG_TYPE_TITLE                       = 0x0001,
+	MSG_TYPE_INGAME                      = 0x0002,
+	MSG_TYPE_TRIGGER_OPEN_PRISON_DOOR    = 0x0004,
+	MSG_TYPE_TRIGGER_OPEN_ELEC_PANEL     = 0x0008,
+	MSG_TYPE_TRIGGER_POWER_DOWN_TOWER    = 0x0010,
+	MSG_TYPE_TRIGGER_OPEN_GUARDPOST_DOOR = 0x0020,
+	MSG_TYPE_TRIGGER_SIREN               = 0x0040,
+	MSG_TYPE_TRIGGER_OPEN_GATE           = 0x0080
 };
+
+static MSG_TYPE& operator |=(MSG_TYPE& a, MSG_TYPE b)
+{
+	a = static_cast<MSG_TYPE>(static_cast<int>(a) | static_cast<int>(b));
+
+	return a;
+}
 
 enum OBJECT_TYPE
 {
@@ -145,6 +159,8 @@ struct CLIENT_TO_SERVER_DATA
 
 struct SERVER_TO_CLIENT_DATA
 {
+	MSG_TYPE			m_MsgType;
+
 	XMFLOAT4X4          m_PlayerWorldMatrices[MAX_CLIENT_CAPACITY]{};
 	ANIMATION_CLIP_TYPE m_PlayerAnimationClipTypes[MAX_CLIENT_CAPACITY]{};
 

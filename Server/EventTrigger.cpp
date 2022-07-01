@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "EventTrigger.h"
+#include "Server.h"
 
 bool CEventTrigger::CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition)
 {
@@ -12,6 +12,11 @@ void CEventTrigger::InteractEventTrigger()
 	{
 		SetInteracted(true);
 	}
+}
+
+void CEventTrigger::Update(float ElapsedTime)
+{
+
 }
 
 void CEventTrigger::LoadEventTriggerFromFile(tifstream& InFile)
@@ -69,6 +74,24 @@ void CEventTrigger::CalculateTriggerAreaByGuard(const XMFLOAT3& Position)
 	m_TriggerArea[3].z = Position.z - 3.0f;
 }
 
+void CEventTrigger::InsertEventObject(const shared_ptr<CGameObject>& EventObject)
+{
+	if (EventObject)
+	{
+		m_EventObjects.push_back(EventObject);
+	}
+}
+
+shared_ptr<CGameObject> CEventTrigger::GetEventObject(UINT Index)
+{
+	if (Index < 0 || Index >= m_EventObjects.size())
+	{
+		return nullptr;
+	}
+
+	return m_EventObjects[Index];
+}
+
 bool CEventTrigger::IsInTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& LookDirection)
 {
 	if (IsActive())
@@ -79,6 +102,7 @@ bool CEventTrigger::IsInTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& Lo
 			{
 				if (!IsInteracted())
 				{
+					// 각도가 일정 범위안에 있다면 상호작용 UI를 렌더링하도록 만든다.
 					if (Vector3::Angle(LookDirection, m_ToTrigger) <= m_ActiveFOV)
 					{
 						return true;
@@ -95,21 +119,21 @@ bool CEventTrigger::IsInTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& Lo
 
 void CEventTrigger::DeleteThisEventTrigger()
 {
-	//vector<shared_ptr<CEventTrigger>>& EventTriggers{ static_pointer_cast<CGameScene>(CSceneManager::GetInstance()->GetCurrentScene())->GetEventTriggers() };
+	vector<shared_ptr<CEventTrigger>>& EventTriggers{ CServer::m_EventTriggers };
 
-	//for (auto iter = EventTriggers.begin(); iter != EventTriggers.end(); ++iter)
-	//{
-	//	shared_ptr<CEventTrigger> EventTrigger{ *iter };
+	for (auto iter = EventTriggers.begin(); iter != EventTriggers.end(); ++iter)
+	{
+		shared_ptr<CEventTrigger> EventTrigger{ *iter };
 
-	//	if (EventTrigger == shared_from_this())
-	//	{
-	//		EventTriggers.erase(iter);
-	//		break;
-	//	}
-	//}
+		if (EventTrigger == shared_from_this())
+		{
+			EventTriggers.erase(iter);
+			break;
+		}
+	}
 
-	//if (EventTriggers.empty())
-	//{
-	//	EventTriggers.shrink_to_fit();
-	//}
+	if (EventTriggers.empty())
+	{
+		EventTriggers.shrink_to_fit();
+	}
 }

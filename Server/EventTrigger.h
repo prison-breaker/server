@@ -22,6 +22,7 @@ public:
 	virtual bool CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition);
 
 	virtual void InteractEventTrigger();
+	virtual void Update(float ElapsedTime);
 
 	void LoadEventTriggerFromFile(tifstream& InFile);
 

@@ -7,6 +7,9 @@
 class CServer
 {
 public:
+	static MSG_TYPE								   m_MsgType;
+	static MSG_TYPE								   m_CompletedTriggers;
+
 	static vector<vector<shared_ptr<CGameObject>>> m_GameObjects;
 	static vector<shared_ptr<CEventTrigger>>	   m_EventTriggers;
 	static shared_ptr<CNavMesh>				       m_NavMesh;

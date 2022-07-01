@@ -13,6 +13,7 @@ public:
 	virtual bool CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition);
 
 	virtual void InteractEventTrigger();
+	virtual void Update(float ElapsedTime);
 };
 
 //=========================================================================================================================
@@ -29,6 +30,7 @@ public:
 	virtual ~CPowerDownEventTrigger() = default;
 
 	virtual void InteractEventTrigger();
+	virtual void Update(float ElapsedTime);
 
 	bool IsOpened() const;
 };
@@ -58,6 +60,7 @@ public:
 	virtual bool CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition);
 
 	virtual void InteractEventTrigger();
+	virtual void Update(float ElapsedTime);
 };
 
 //=========================================================================================================================
