@@ -17,26 +17,20 @@ public:
 
 	static SERVER_TO_CLIENT_DATA                   m_SendedPacketData;
 
-private:
-	bool		                                   m_GameStart{};
-											       
-	// 클라이언트를 수용하기 위한 대기 소켓	          
-	SOCKET                                         m_ListenSocket{};
-											       
-	// 서버의 소켓 주소 구조체				       
-	SOCKADDR_IN                                    m_SocketAddress{};
-
-	// 접속한 클라이언트들의 소켓 정보를 담고 있는 배열
-	SOCKET_INFO                                    m_ClientSocketInfos[MAX_CLIENT_CAPACITY]{};
+private:				              
+	SOCKET                                         m_ListenSocket{};                           // 클라이언트를 수용하기 위한 대기 소켓
+	SOCKADDR_IN                                    m_SocketAddress{};                          // 서버의 소켓 주소 구조체
+	SOCKET_INFO                                    m_ClientSocketInfos[MAX_CLIENT_CAPACITY]{}; // 접속한 클라이언트들의 소켓 정보를 담고 있는 배열
 
 	HANDLE										   m_MainSyncEvents[2]{};
 	HANDLE										   m_ClientSyncEvents[MAX_CLIENT_CAPACITY]{};
 
+	UINT										   m_ConnectedClientCount{};
 	UINT									       m_RecentClientID{};
 
-	unique_ptr<CTimer>							   m_Timer{};
-	
 	CLIENT_TO_SERVER_DATA						   m_ReceivedPacketData[MAX_CLIENT_CAPACITY]{};
+
+	unique_ptr<CTimer>							   m_Timer{};
 
 public:
 	CServer();

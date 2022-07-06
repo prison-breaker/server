@@ -7,7 +7,7 @@ private:
 	float m_DoorAngle{};
 
 public:
-	COpenDoorEventTrigger();
+	COpenDoorEventTrigger(MSG_TYPE Type);
 	virtual ~COpenDoorEventTrigger() = default;
 
 	virtual bool CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition);
@@ -26,7 +26,7 @@ private:
 	float m_PanelAngle{};
 
 public:
-	CPowerDownEventTrigger();
+	CPowerDownEventTrigger(MSG_TYPE Type);
 	virtual ~CPowerDownEventTrigger() = default;
 
 	virtual void InteractEventTrigger();
@@ -40,7 +40,7 @@ public:
 class CSirenEventTrigger : public CEventTrigger
 {
 public:
-	CSirenEventTrigger();
+	CSirenEventTrigger(MSG_TYPE Type);
 	virtual ~CSirenEventTrigger() = default;
 
 	virtual void InteractEventTrigger();
@@ -54,7 +54,7 @@ private:
 	float m_GateAngle{};
 
 public:
-	COpenGateEventTrigger();
+	COpenGateEventTrigger(MSG_TYPE Type);
 	virtual ~COpenGateEventTrigger() = default;
 
 	virtual bool CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition);
@@ -68,7 +68,7 @@ public:
 class CGetPistolEventTrigger : public CEventTrigger
 {
 public:
-	CGetPistolEventTrigger();
+	CGetPistolEventTrigger(MSG_TYPE Type);
 	virtual ~CGetPistolEventTrigger() = default;
 
 	virtual void InteractEventTrigger();
@@ -79,7 +79,7 @@ public:
 class CGetKeyEventTrigger : public CEventTrigger
 {
 public:
-	CGetKeyEventTrigger();
+	CGetKeyEventTrigger(MSG_TYPE Type);
 	virtual ~CGetKeyEventTrigger() = default;
 
 	virtual void InteractEventTrigger();

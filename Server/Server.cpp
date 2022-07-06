@@ -120,7 +120,6 @@ DWORD WINAPI CServer::ProcessClient(LPVOID Arg)
 
     // 최초로 클라이언트에게 초기화된 플레이어의 아이디를 보낸다.
     int ReturnValue{ send(ClientSocket, (char*)&ClientID, sizeof(UINT), 0) };
-    MSG_TYPE MsgType{};
 
     if (ReturnValue == SOCKET_ERROR)
     {
@@ -128,6 +127,8 @@ DWORD WINAPI CServer::ProcessClient(LPVOID Arg)
     }
     else
     {
+        MSG_TYPE MsgType{};
+
         while (true)
         {
             WaitForSingleObject(Server->m_MainSyncEvents[0], INFINITE);
@@ -149,6 +150,16 @@ DWORD WINAPI CServer::ProcessClient(LPVOID Arg)
             {
                 SetEvent(Server->m_ClientSyncEvents[ClientID]);
                 WaitForSingleObject(Server->m_MainSyncEvents[1], INFINITE);
+
+                bool IsReady{ Server->m_ConnectedClientCount == 2 };
+
+                ReturnValue = send(ClientSocket, (char*)&IsReady, sizeof(IsReady), 0);
+
+                if (ReturnValue == SOCKET_ERROR)
+                {
+                    Server::ErrorDisplay("send()");
+                    break;
+                }
             }
             else if (MsgType & MSG_TYPE_INGAME)
             {
@@ -381,53 +392,28 @@ void CServer::LoadEventTriggerFromFile(const tstring& FileName)
 
             m_EventTriggers.reserve(TriggerCount);
         }
-        else if (Token == TEXT("<EventTrigger>"))
+        else if (Token == TEXT("<Type>"))
         {
-            // <Type>
-            File::ReadStringFromFile(InFile, Token);
-
-            UINT TriggerType{ File::ReadIntegerFromFile(InFile) };
+            MSG_TYPE TriggerType{ static_cast<MSG_TYPE>(File::ReadIntegerFromFile(InFile)) };
 
             switch (TriggerType)
             {
-            case 0:
-                EventTrigger = make_shared<COpenDoorEventTrigger>();
+            case MSG_TYPE_TRIGGER_OPEN_PRISON_DOOR:
+            case MSG_TYPE_TRIGGER_OPEN_GUARDPOST_DOOR:
+                EventTrigger = make_shared<COpenDoorEventTrigger>(TriggerType);
                 break;
-            case 1:
-                EventTrigger = make_shared<CPowerDownEventTrigger>();
+            case MSG_TYPE_TRIGGER_OPEN_ELEC_PANEL:
+                EventTrigger = make_shared<CPowerDownEventTrigger>(TriggerType);
                 break;
-            case 2:
-                EventTrigger = make_shared<CSirenEventTrigger>();
+            case MSG_TYPE_TRIGGER_SIREN:
+                EventTrigger = make_shared<CSirenEventTrigger>(TriggerType);
                 break;
-            case 3:
-                EventTrigger = make_shared<COpenGateEventTrigger>();
+            case MSG_TYPE_TRIGGER_OPEN_GATE:
+                EventTrigger = make_shared<COpenGateEventTrigger>(TriggerType);
                 break;
             }
 
             EventTrigger->LoadEventTriggerFromFile(InFile);
-
-            // <TargetRootIndex>
-            File::ReadStringFromFile(InFile, Token);
-
-            UINT TargetRootIndex{ File::ReadIntegerFromFile(InFile) };
-
-            // <TargetObject>
-            File::ReadStringFromFile(InFile, Token);
-
-            UINT TargetObjectCount{ File::ReadIntegerFromFile(InFile) };
-
-            if (TargetObjectCount > 0)
-            {
-                for (UINT i = 0; i < TargetObjectCount; ++i)
-                {
-                    File::ReadStringFromFile(InFile, Token);
-
-                    shared_ptr<CGameObject> TargetObject{ m_GameObjects[OBJECT_TYPE_STRUCTURE][TargetRootIndex]->FindFrame(Token) };
-
-                    EventTrigger->InsertEventObject(TargetObject);
-                }
-            }
-
             m_EventTriggers.push_back(EventTrigger);
         }
         else if (Token == TEXT("</EventTriggers>"))
@@ -446,44 +432,32 @@ void CServer::LoadEventTriggerFromFile(const tstring& FileName)
     //iota(Indices.begin(), Indices.end(), 2);
     //shuffle(Indices.begin(), Indices.end(), default_random_engine{ random_device{}() });
 
-    //for (UINT i = 0; i < 5; ++i)
+    //for (UINT i = 0 ; i < 5 ; ++i)
     //{
-    //    if (m_GameObjects[OBJECT_TYPE_NPC][Indices[i]])
-    //    {
-    //        shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(m_GameObjects[OBJECT_TYPE_NPC][Indices[i]]) };
+    //	if (m_GameObjects[OBJECT_TYPE_NPC][Indices[i]])
+    //	{
+    //		shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(m_GameObjects[OBJECT_TYPE_NPC][Indices[i]]) };
 
-    //        EventTrigger = make_shared<CGetPistolEventTrigger>();
-    //        Guard->SetEventTrigger(EventTrigger);
+    //		EventTrigger = make_shared<CGetPistolEventTrigger>();
+    //		Guard->SetEventTrigger(EventTrigger);
 
-    //        m_EventTriggers.push_back(EventTrigger);
-    //    }
+    //		m_EventTriggers.push_back(EventTrigger);
+    //	}
     //}
 
     //// 열쇠를 드롭하는 트리거를 추가한다.
     //// 열쇠는 외형이 다른 교도관(Index: 0, 1)이 보유하고 있다.
     //for (UINT i = 0; i < 2; ++i)
     //{
-    //    if (m_GameObjects[OBJECT_TYPE_NPC][i])
-    //    {
-    //        shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(m_GameObjects[OBJECT_TYPE_NPC][i]) };
+    //	if (m_GameObjects[OBJECT_TYPE_NPC][i])
+    //	{
+    //		shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(m_GameObjects[OBJECT_TYPE_NPC][i]) };
 
-    //        EventTrigger = make_shared<CGetKeyEventTrigger>();
-    //        Guard->SetEventTrigger(EventTrigger);
+    //		EventTrigger = make_shared<CGetKeyEventTrigger>();
+    //		Guard->SetEventTrigger(EventTrigger);
 
-    //        m_EventTriggers.push_back(EventTrigger);
-    //    }
-    //}
-
-    //// 모든 트리거 객체는 상호작용 UI 객체를 공유한다.
-    //UINT TriggerCount{ static_cast<UINT>(m_EventTriggers.size()) };
-
-    //for (const auto& EventTrigger : m_EventTriggers)
-    //{
-    //    if (EventTrigger)
-    //    {
-    //        // [BILBOARD_OBJECT_TYPE_UI][9]: InteractionUI
-    //        EventTrigger->SetInteractionUI(m_BilboardObjects[BILBOARD_OBJECT_TYPE_UI][9]);
-    //    }
+    //		m_EventTriggers.push_back(EventTrigger);
+    //	}
     //}
 }
 
@@ -515,6 +489,8 @@ bool CServer::RegisterPlayer(SOCKET Socket, const SOCKADDR_IN& SocketAddress)
     m_ClientSocketInfos[ValidID].m_Socket = Socket;
     m_ClientSocketInfos[ValidID].m_SocketAddress = SocketAddress;
 
+    m_ConnectedClientCount += 1;
+
     return true;
 }
 
@@ -523,9 +499,11 @@ void CServer::RemovePlayer(UINT ID)
     closesocket(m_ClientSocketInfos[ID].m_Socket);
     SetEvent(m_ClientSyncEvents[ID]);
 
-    m_ClientSocketInfos[ID].m_Socket = NULL;
-
     cout << "[클라이언트 종료] " << "IP : " << inet_ntoa(m_ClientSocketInfos[ID].m_SocketAddress.sin_addr) << ", 포트번호 : " << ntohs(m_ClientSocketInfos[ID].m_SocketAddress.sin_port) << endl;
+
+    memset(&m_ClientSocketInfos[ID], NULL, sizeof(SOCKET_INFO));
+
+    m_ConnectedClientCount -= 1;
 }
 
 void CServer::GameLoop()

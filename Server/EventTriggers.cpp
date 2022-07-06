@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Server.h"
 
-COpenDoorEventTrigger::COpenDoorEventTrigger()
+COpenDoorEventTrigger::COpenDoorEventTrigger(MSG_TYPE Type) : CEventTrigger(Type)
 {
 	m_IsActive = true;
 	m_ActiveFOV = 70.0f;
@@ -28,17 +28,6 @@ void COpenDoorEventTrigger::InteractEventTrigger()
 	if (!IsInteracted())
 	{
 		CEventTrigger::InteractEventTrigger();
-
-		if (CServer::m_CompletedTriggers & MSG_TYPE_TRIGGER_OPEN_PRISON_DOOR)
-		{
-			CServer::m_MsgType |= MSG_TYPE_TRIGGER_OPEN_GUARDPOST_DOOR;
-			CServer::m_CompletedTriggers |= MSG_TYPE_TRIGGER_OPEN_GUARDPOST_DOOR;
-		}
-		else
-		{
-			CServer::m_MsgType |= MSG_TYPE_TRIGGER_OPEN_PRISON_DOOR;
-			CServer::m_CompletedTriggers |= MSG_TYPE_TRIGGER_OPEN_PRISON_DOOR;
-		}
 	}
 }
 
@@ -64,7 +53,7 @@ void COpenDoorEventTrigger::Update(float ElapsedTime)
 
 //=========================================================================================================================
 
-CPowerDownEventTrigger::CPowerDownEventTrigger()
+CPowerDownEventTrigger::CPowerDownEventTrigger(MSG_TYPE Type) : CEventTrigger(Type)
 {
 	m_IsActive = true;
 	m_ActiveFOV = 40.0f;
@@ -79,9 +68,6 @@ void CPowerDownEventTrigger::InteractEventTrigger()
 		// 배전함이 열려있다면
 		if (IsOpened())
 		{
-			CServer::m_MsgType |= MSG_TYPE_TRIGGER_POWER_DOWN_TOWER;
-			CServer::m_CompletedTriggers |= MSG_TYPE_TRIGGER_POWER_DOWN_TOWER;
-
 			// 감시탑의 조명을 끈다.
 			CServer::m_Lights[0].m_IsActive = false;
 
@@ -90,8 +76,7 @@ void CPowerDownEventTrigger::InteractEventTrigger()
 		}
 		else
 		{
-			CServer::m_MsgType |= MSG_TYPE_TRIGGER_OPEN_ELEC_PANEL;
-			CServer::m_CompletedTriggers |= MSG_TYPE_TRIGGER_OPEN_ELEC_PANEL;
+			m_Type = MSG_TYPE_TRIGGER_POWER_DOWN_TOWER;
 		}
 	}
 }
@@ -127,7 +112,7 @@ bool CPowerDownEventTrigger::IsOpened() const
 
 //=========================================================================================================================
 
-CSirenEventTrigger::CSirenEventTrigger()
+CSirenEventTrigger::CSirenEventTrigger(MSG_TYPE Type) : CEventTrigger(Type)
 {
 	m_IsActive = true;
 	m_ActiveFOV = 40.0f;
@@ -138,9 +123,6 @@ void CSirenEventTrigger::InteractEventTrigger()
 	if (!IsInteracted())
 	{
 		CEventTrigger::InteractEventTrigger();
-
-		CServer::m_MsgType |= MSG_TYPE_TRIGGER_SIREN;
-		CServer::m_CompletedTriggers |= MSG_TYPE_TRIGGER_SIREN;
 
 		vector<vector<shared_ptr<CGameObject>>>& GameObjects{ CServer::m_GameObjects };
 		shared_ptr<CNavMesh> NavMesh{ CServer::m_NavMesh };
@@ -178,7 +160,7 @@ void CSirenEventTrigger::InteractEventTrigger()
 
 //=========================================================================================================================
 
-COpenGateEventTrigger::COpenGateEventTrigger()
+COpenGateEventTrigger::COpenGateEventTrigger(MSG_TYPE Type) : CEventTrigger(Type)
 {
 	m_IsActive = true;
 	m_ActiveFOV = 70.0f;
@@ -207,9 +189,6 @@ void COpenGateEventTrigger::InteractEventTrigger()
 		if ((CServer::m_CompletedTriggers & MSG_TYPE_TRIGGER_POWER_DOWN_TOWER) && (CServer::m_CompletedTriggers & MSG_TYPE_TRIGGER_SIREN))
 		{
 			CEventTrigger::InteractEventTrigger();
-
-			CServer::m_MsgType |= MSG_TYPE_TRIGGER_OPEN_GATE;
-			CServer::m_CompletedTriggers |= MSG_TYPE_TRIGGER_OPEN_GATE;
 		}
 	}
 }
@@ -236,7 +215,7 @@ void COpenGateEventTrigger::Update(float ElapsedTime)
 
 //=========================================================================================================================
 
-CGetPistolEventTrigger::CGetPistolEventTrigger()
+CGetPistolEventTrigger::CGetPistolEventTrigger(MSG_TYPE Type) : CEventTrigger(Type)
 {
 	m_ActiveFOV = 360.0f;
 }
@@ -266,7 +245,7 @@ void CGetPistolEventTrigger::InteractEventTrigger()
 
 //=========================================================================================================================
 
-CGetKeyEventTrigger::CGetKeyEventTrigger()
+CGetKeyEventTrigger::CGetKeyEventTrigger(MSG_TYPE Type) : CEventTrigger(Type)
 {
 	m_ActiveFOV = 360.0f;
 }

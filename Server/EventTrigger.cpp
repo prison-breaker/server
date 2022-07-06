@@ -1,6 +1,12 @@
 #include "stdafx.h"
 #include "Server.h"
 
+CEventTrigger::CEventTrigger(MSG_TYPE Type) :
+	m_Type{ Type }
+{
+
+}
+
 bool CEventTrigger::CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition)
 {
 	return true;
@@ -11,6 +17,9 @@ void CEventTrigger::InteractEventTrigger()
 	if (!IsInteracted())
 	{
 		SetInteracted(true);
+
+		CServer::m_MsgType |= m_Type;
+		CServer::m_CompletedTriggers |= m_Type;
 	}
 }
 
@@ -22,6 +31,7 @@ void CEventTrigger::Update(float ElapsedTime)
 void CEventTrigger::LoadEventTriggerFromFile(tifstream& InFile)
 {
 	tstring Token{};
+	UINT TargetRootIndex{};
 
 	while (true)
 	{
@@ -34,9 +44,37 @@ void CEventTrigger::LoadEventTriggerFromFile(tifstream& InFile)
 		else if (Token == TEXT("<ToTrigger>"))
 		{
 			InFile.read(reinterpret_cast<TCHAR*>(&m_ToTrigger), sizeof(XMFLOAT3));
+		}
+		else if (Token == TEXT("<TargetRootIndex>"))
+		{
+			TargetRootIndex = File::ReadIntegerFromFile(InFile);
+		}
+		else if (Token == TEXT("<TargetObject>"))
+		{
+			UINT TargetObjectCount{ File::ReadIntegerFromFile(InFile) };
+			vector<vector<shared_ptr<CGameObject>>>& GameObjects{ CServer::m_GameObjects };
+
+			m_EventObjects.reserve(TargetObjectCount);
+
+			for (UINT i = 0; i < TargetObjectCount; ++i)
+			{
+				File::ReadStringFromFile(InFile, Token);
+
+				shared_ptr<CGameObject> TargetObject{ GameObjects[OBJECT_TYPE_STRUCTURE][TargetRootIndex]->FindFrame(Token) };
+
+				if (TargetObject)
+				{
+					m_EventObjects.push_back(TargetObject);
+				}
+			}
 			break;
 		}
 	}
+}
+
+MSG_TYPE CEventTrigger::GetType() const
+{
+	return m_Type;
 }
 
 void CEventTrigger::SetActive(bool IsActive)
