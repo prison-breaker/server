@@ -154,6 +154,32 @@ void CPlayer::ApplySlidingVectorToPosition(const shared_ptr<CNavMesh>& NavMesh, 
 	}
 }
 
+bool CPlayer::IsCollidedByPlayer(const XMFLOAT3& NewPosition)
+{
+	vector<vector<shared_ptr<CGameObject>>>& GameObjects{ CServer::m_GameObjects };
+
+	for (const auto& GameObject : GameObjects[OBJECT_TYPE_PLAYER])
+	{
+		if (GameObject)
+		{
+			if (shared_from_this() != GameObject)
+			{
+				shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(GameObject) };
+
+				if (Player->GetHealth() > 0)
+				{
+					if (Math::Distance(Player->GetPosition(), NewPosition) <= 2.0f)
+					{
+						return true;
+					}
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
 bool CPlayer::IsCollidedByGuard(const XMFLOAT3& NewPosition)
 {
 	vector<vector<shared_ptr<CGameObject>>>& GameObjects{ CServer::m_GameObjects };
@@ -225,8 +251,8 @@ void CPlayer::ProcessInput(float ElapsedTime, UINT InputMask)
 		ApplySlidingVectorToPosition(NavMesh, NewPosition);
 	}
 
-	// NewPosition으로 이동 시, 교도관과의 충돌, 트리거 내 상호작용을 처리하거나, 움직임 제어 영향을 받지 않는다면 움직이도록 만든다.
-	if (!IsCollidedByGuard(NewPosition) && !IsCollidedByEventTrigger(NewPosition, (InputMask & INPUT_MASK_F) ? true : false))
+	// NewPosition으로 이동 시, 타 플레이어, 교도관과의 충돌, 트리거 내 상호작용을 처리하거나, 움직임 제어 영향을 받지 않는다면 움직이도록 만든다.
+	if (!IsCollidedByPlayer(NewPosition) && !IsCollidedByGuard(NewPosition) && !IsCollidedByEventTrigger(NewPosition, (InputMask & INPUT_MASK_F) ? true : false))
 	{
 		SetPosition(NewPosition);
 	}

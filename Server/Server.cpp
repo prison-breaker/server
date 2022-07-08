@@ -119,22 +119,63 @@ DWORD WINAPI CServer::ProcessClient(LPVOID Arg)
     SOCKET ClientSocket{ Server->m_ClientSocketInfos[ClientID].m_Socket };
 
     // 최초로 클라이언트에게 초기화된 플레이어의 아이디를 보낸다.
-    int ReturnValue{ send(ClientSocket, (char*)&ClientID, sizeof(UINT), 0) };
+    int ReturnValue{ send(ClientSocket, (char*)&ClientID, sizeof(ClientID), 0) };
 
     if (ReturnValue == SOCKET_ERROR)
     {
         Server::ErrorDisplay("send()");
+        Server->RemovePlayer(ClientID);
+
+        return 0;
     }
-    else
+
+    ReturnValue = send(ClientSocket, (char*)Server->m_HasPistolGuardIndices, sizeof(Server->m_HasPistolGuardIndices), 0);
+
+    if (ReturnValue == SOCKET_ERROR)
     {
-        MSG_TYPE MsgType{};
+        Server::ErrorDisplay("send()");
+        Server->RemovePlayer(ClientID);
 
-        while (true)
+        return 0;
+    }
+
+    MSG_TYPE MsgType{};
+
+    while (true)
+    {
+        WaitForSingleObject(Server->m_MainSyncEvents[0], INFINITE);
+
+        // 메세지 패킷 데이터를 수신한다.
+        ReturnValue = recv(ClientSocket, (char*)&MsgType, sizeof(MsgType), MSG_WAITALL);
+
+        if (ReturnValue == SOCKET_ERROR)
         {
-            WaitForSingleObject(Server->m_MainSyncEvents[0], INFINITE);
+            Server::ErrorDisplay("recv()");
+            break;
+        }
+        else if (ReturnValue == 0)
+        {
+            break;
+        }
 
-            // 메세지 패킷 데이터를 수신한다.
-            ReturnValue = recv(ClientSocket, (char*)&MsgType, sizeof(MsgType), MSG_WAITALL);
+        if (MsgType & MSG_TYPE_TITLE)
+        {
+            SetEvent(Server->m_ClientSyncEvents[ClientID]);
+            WaitForSingleObject(Server->m_MainSyncEvents[1], INFINITE);
+
+            bool IsReady{ Server->m_ConnectedClientCount == 2 };
+
+            ReturnValue = send(ClientSocket, (char*)&IsReady, sizeof(IsReady), 0);
+
+            if (ReturnValue == SOCKET_ERROR)
+            {
+                Server::ErrorDisplay("send()");
+                break;
+            }
+        }
+        else if (MsgType & MSG_TYPE_INGAME)
+        {
+            ReturnValue = recv(ClientSocket, (char*)&Server->m_ReceivedPacketData[ClientID], sizeof(Server->m_ReceivedPacketData[ClientID]), MSG_WAITALL);
 
             if (ReturnValue == SOCKET_ERROR)
             {
@@ -146,49 +187,19 @@ DWORD WINAPI CServer::ProcessClient(LPVOID Arg)
                 break;
             }
 
-            if (MsgType & MSG_TYPE_TITLE)
+            SetEvent(Server->m_ClientSyncEvents[ClientID]);
+            WaitForSingleObject(Server->m_MainSyncEvents[1], INFINITE);
+
+            ReturnValue = send(ClientSocket, (char*)&Server->m_SendedPacketData, sizeof(Server->m_SendedPacketData), 0);
+
+            if (ReturnValue == SOCKET_ERROR)
             {
-                SetEvent(Server->m_ClientSyncEvents[ClientID]);
-                WaitForSingleObject(Server->m_MainSyncEvents[1], INFINITE);
-
-                bool IsReady{ Server->m_ConnectedClientCount == 2 };
-
-                ReturnValue = send(ClientSocket, (char*)&IsReady, sizeof(IsReady), 0);
-
-                if (ReturnValue == SOCKET_ERROR)
-                {
-                    Server::ErrorDisplay("send()");
-                    break;
-                }
-            }
-            else if (MsgType & MSG_TYPE_INGAME)
-            {
-                ReturnValue = recv(ClientSocket, (char*)&Server->m_ReceivedPacketData[ClientID], sizeof(Server->m_ReceivedPacketData[ClientID]), MSG_WAITALL);
-
-                if (ReturnValue == SOCKET_ERROR)
-                {
-                    Server::ErrorDisplay("recv()");
-                    break;
-                }
-                else if (ReturnValue == 0)
-                {
-                    break;
-                }
-
-                SetEvent(Server->m_ClientSyncEvents[ClientID]);
-                WaitForSingleObject(Server->m_MainSyncEvents[1], INFINITE);
-
-                ReturnValue = send(ClientSocket, (char*)&Server->m_SendedPacketData, sizeof(Server->m_SendedPacketData), 0);
-
-                if (ReturnValue == SOCKET_ERROR)
-                {
-                    Server::ErrorDisplay("send()");
-                    break;
-                }
+                Server::ErrorDisplay("send()");
+                break;
             }
         }
     }
-    
+
     Server->RemovePlayer(ClientID);
 
     return 0;
@@ -424,41 +435,43 @@ void CServer::LoadEventTriggerFromFile(const tstring& FileName)
 
     tcout << FileName << TEXT(" 로드 완료...") << endl << endl;
 
-    //// 권총을 드롭하는 트리거를 추가한다.
-    //// 권총은 열쇠를 갖지 않은 임의의 교도관(Index: 2 ~ 14) 중 5명이 보유하고 있다.
-    //vector<UINT> Indices{};
+    // 권총을 드롭하는 트리거를 추가한다.
+    // 권총은 열쇠를 갖지 않은 임의의 교도관(Index: 2 ~ 14) 중 5명이 보유하고 있다.
+    vector<UINT> Indices{};
 
-    //Indices.resize(m_GameObjects[OBJECT_TYPE_NPC].size() - 2);
-    //iota(Indices.begin(), Indices.end(), 2);
-    //shuffle(Indices.begin(), Indices.end(), default_random_engine{ random_device{}() });
+    Indices.resize(m_GameObjects[OBJECT_TYPE_NPC].size() - 2);
+    iota(Indices.begin(), Indices.end(), 2);
+    shuffle(Indices.begin(), Indices.end(), default_random_engine{ random_device{}() });
+    sort(Indices.begin(), Indices.begin() + 5);
 
-    //for (UINT i = 0 ; i < 5 ; ++i)
-    //{
-    //	if (m_GameObjects[OBJECT_TYPE_NPC][Indices[i]])
-    //	{
-    //		shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(m_GameObjects[OBJECT_TYPE_NPC][Indices[i]]) };
+    for (UINT i = 0 ; i < 5 ; ++i)
+    {
+    	if (m_GameObjects[OBJECT_TYPE_NPC][Indices[i]])
+    	{
+    		shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(m_GameObjects[OBJECT_TYPE_NPC][Indices[i]]) };
 
-    //		EventTrigger = make_shared<CGetPistolEventTrigger>();
-    //		Guard->SetEventTrigger(EventTrigger);
+    		EventTrigger = make_shared<CGetPistolEventTrigger>(MSG_TYPE_NONE);
+    		Guard->SetEventTrigger(EventTrigger);
 
-    //		m_EventTriggers.push_back(EventTrigger);
-    //	}
-    //}
+    		m_EventTriggers.push_back(EventTrigger);
+            m_HasPistolGuardIndices[i] = Indices[i];
+    	}
+    }
 
-    //// 열쇠를 드롭하는 트리거를 추가한다.
-    //// 열쇠는 외형이 다른 교도관(Index: 0, 1)이 보유하고 있다.
-    //for (UINT i = 0; i < 2; ++i)
-    //{
-    //	if (m_GameObjects[OBJECT_TYPE_NPC][i])
-    //	{
-    //		shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(m_GameObjects[OBJECT_TYPE_NPC][i]) };
+    // 열쇠를 드롭하는 트리거를 추가한다.
+    // 열쇠는 외형이 다른 교도관(Index: 0, 1)이 보유하고 있다.
+    for (UINT i = 0; i < 2; ++i)
+    {
+    	if (m_GameObjects[OBJECT_TYPE_NPC][i])
+    	{
+    		shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(m_GameObjects[OBJECT_TYPE_NPC][i]) };
 
-    //		EventTrigger = make_shared<CGetKeyEventTrigger>();
-    //		Guard->SetEventTrigger(EventTrigger);
+    		EventTrigger = make_shared<CGetKeyEventTrigger>(MSG_TYPE_NONE);
+    		Guard->SetEventTrigger(EventTrigger);
 
-    //		m_EventTriggers.push_back(EventTrigger);
-    //	}
-    //}
+    		m_EventTriggers.push_back(EventTrigger);
+    	}
+    }
 }
 
 UINT CServer::GetValidClientID() const
@@ -522,6 +535,7 @@ void CServer::GameLoop()
         }
 
         m_Timer->Tick(0.0f);
+
 
         UpdatePlayerInfo();
         Animate(m_Timer->GetElapsedTime());

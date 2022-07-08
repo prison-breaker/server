@@ -28,6 +28,8 @@ private:
 	UINT										   m_ConnectedClientCount{};
 	UINT									       m_RecentClientID{};
 
+	UINT								           m_HasPistolGuardIndices[5]{};
+
 	CLIENT_TO_SERVER_DATA						   m_ReceivedPacketData[MAX_CLIENT_CAPACITY]{};
 
 	unique_ptr<CTimer>							   m_Timer{};

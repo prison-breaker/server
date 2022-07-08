@@ -35,7 +35,11 @@ enum MSG_TYPE
 	MSG_TYPE_TRIGGER_POWER_DOWN_TOWER    = 0x0010,
 	MSG_TYPE_TRIGGER_OPEN_GUARDPOST_DOOR = 0x0020,
 	MSG_TYPE_TRIGGER_SIREN               = 0x0040,
-	MSG_TYPE_TRIGGER_OPEN_GATE           = 0x0080
+	MSG_TYPE_TRIGGER_OPEN_GATE           = 0x0080,
+	MSG_TYPE_TRIGGER_PLAYER1_GET_PISTOL  = 0x0100,
+	MSG_TYPE_TRIGGER_PLAYER1_GET_KEY     = 0x0200,
+	MSG_TYPE_TRIGGER_PLAYER2_GET_PISTOL  = 0x0400,
+	MSG_TYPE_TRIGGER_PLAYER2_GET_KEY     = 0x0800,
 };
 
 static MSG_TYPE& operator |=(MSG_TYPE& a, MSG_TYPE b)
@@ -104,6 +108,8 @@ enum ANIMATION_CLIP_TYPE
 #include <vector>
 #include <unordered_map>
 #include <queue>
+#include <numeric>
+#include <random>
 using namespace std;
 
 // DirectX Header
@@ -137,8 +143,6 @@ struct SOCKET_INFO
 	UINT		m_ID{};
 	SOCKET      m_Socket{};
 	SOCKADDR_IN m_SocketAddress{};
-
-	bool	    m_Completed{};
 };
 
 struct LIGHT

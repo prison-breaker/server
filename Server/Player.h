@@ -43,8 +43,7 @@ public:
 
 	void ApplySlidingVectorToPosition(const shared_ptr<CNavMesh>& NavMesh, XMFLOAT3& NewPosition);
 
-	void Rotate(float Pitch, float Yaw, float Roll, float ElapsedTime, float NearestHitDistance);
-
+	bool IsCollidedByPlayer(const XMFLOAT3& NewPosition);
 	bool IsCollidedByGuard(const XMFLOAT3& NewPosition);
 	bool IsCollidedByEventTrigger(const XMFLOAT3& NewPosition, bool IsInteracted);
 
