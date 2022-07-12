@@ -1,25 +1,16 @@
 #include "stdafx.h"
 #include "Server.h"
 
-CEventTrigger::CEventTrigger(MSG_TYPE Type) :
-	m_Type{ Type }
-{
-
-}
-
 bool CEventTrigger::CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition)
 {
 	return true;
 }
 
-void CEventTrigger::InteractEventTrigger()
+void CEventTrigger::InteractEventTrigger(UINT CallerIndex)
 {
 	if (!IsInteracted())
 	{
 		SetInteracted(true);
-
-		CServer::m_MsgType |= m_Type;
-		CServer::m_CompletedTriggers |= m_Type;
 	}
 }
 
@@ -70,11 +61,6 @@ void CEventTrigger::LoadEventTriggerFromFile(tifstream& InFile)
 			break;
 		}
 	}
-}
-
-MSG_TYPE CEventTrigger::GetType() const
-{
-	return m_Type;
 }
 
 void CEventTrigger::SetActive(bool IsActive)
@@ -140,38 +126,14 @@ bool CEventTrigger::IsInTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& Lo
 			{
 				if (!IsInteracted())
 				{
-					// 각도가 일정 범위안에 있다면 상호작용 UI를 렌더링하도록 만든다.
 					if (Vector3::Angle(LookDirection, m_ToTrigger) <= m_ActiveFOV)
 					{
 						return true;
 					}
 				}
-
-				return true;
 			}
 		}
 	}
 
 	return false;
-}
-
-void CEventTrigger::DeleteThisEventTrigger()
-{
-	vector<shared_ptr<CEventTrigger>>& EventTriggers{ CServer::m_EventTriggers };
-
-	for (auto iter = EventTriggers.begin(); iter != EventTriggers.end(); ++iter)
-	{
-		shared_ptr<CEventTrigger> EventTrigger{ *iter };
-
-		if (EventTrigger == shared_from_this())
-		{
-			EventTriggers.erase(iter);
-			break;
-		}
-	}
-
-	if (EventTriggers.empty())
-	{
-		EventTriggers.shrink_to_fit();
-	}
 }

@@ -5,6 +5,8 @@
 class CPlayer : public CGameObject
 {
 private:
+	UINT							   m_ID{};
+
 	XMFLOAT3						   m_Rotation{};
 
 	UINT							   m_Health{ 100 };
@@ -23,6 +25,9 @@ public:
 	virtual void Initialize();
 
 	virtual void Animate(float ElapsedTime);
+
+	void SetID(UINT ID);
+	UINT GetID() const;
 
 	void SetHealth(UINT Health);
 	UINT GetHealth() const;

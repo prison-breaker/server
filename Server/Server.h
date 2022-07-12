@@ -8,7 +8,6 @@ class CServer
 {
 public:
 	static MSG_TYPE								   m_MsgType;
-	static MSG_TYPE								   m_CompletedTriggers;
 
 	static vector<vector<shared_ptr<CGameObject>>> m_GameObjects;
 	static vector<shared_ptr<CEventTrigger>>	   m_EventTriggers;
@@ -16,6 +15,7 @@ public:
 	static vector<LIGHT>						   m_Lights;
 
 	static SERVER_TO_CLIENT_DATA                   m_SendedPacketData;
+	static TRIGGER_DATA							   m_TriggerData;
 
 private:				              
 	SOCKET                                         m_ListenSocket{};                           // 클라이언트를 수용하기 위한 대기 소켓
@@ -40,7 +40,7 @@ public:
 
 	static DWORD WINAPI AcceptClient(LPVOID Arg);
 	static DWORD WINAPI ProcessClient(LPVOID Arg);
-
+	
 	void CreateEvents();
 
 	void BuildObjects();

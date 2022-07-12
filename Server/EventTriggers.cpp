@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Server.h"
 
-COpenDoorEventTrigger::COpenDoorEventTrigger(MSG_TYPE Type) : CEventTrigger(Type)
+COpenDoorEventTrigger::COpenDoorEventTrigger()
 {
 	m_IsActive = true;
 	m_ActiveFOV = 70.0f;
@@ -23,14 +23,6 @@ bool COpenDoorEventTrigger::CanPassTriggerArea(const XMFLOAT3& Position, const X
 	return true;
 }
 
-void COpenDoorEventTrigger::InteractEventTrigger()
-{
-	if (!IsInteracted())
-	{
-		CEventTrigger::InteractEventTrigger();
-	}
-}
-
 void COpenDoorEventTrigger::Update(float ElapsedTime)
 {
 	if (IsActive() && IsInteracted())
@@ -43,40 +35,28 @@ void COpenDoorEventTrigger::Update(float ElapsedTime)
 			m_EventObjects[1]->Rotate(WorldUp, -50.0f * ElapsedTime);
 			m_DoorAngle += 50.0f * ElapsedTime;
 		}
-		else
-		{
-			// 문이 모두 열렸다면, 현재 이벤트 트리거를 삭제한다.
-			DeleteThisEventTrigger();
-		}
 	}
 }
 
 //=========================================================================================================================
 
-CPowerDownEventTrigger::CPowerDownEventTrigger(MSG_TYPE Type) : CEventTrigger(Type)
+CPowerDownEventTrigger::CPowerDownEventTrigger()
 {
 	m_IsActive = true;
 	m_ActiveFOV = 40.0f;
 }
 
-void CPowerDownEventTrigger::InteractEventTrigger()
+void CPowerDownEventTrigger::InteractEventTrigger(UINT CallerIndex)
 {
 	if (!IsInteracted())
 	{
-		CEventTrigger::InteractEventTrigger();
+		CEventTrigger::InteractEventTrigger(CallerIndex);
 
 		// 배전함이 열려있다면
 		if (IsOpened())
 		{
 			// 감시탑의 조명을 끈다.
 			CServer::m_Lights[0].m_IsActive = false;
-
-			// 감시탑의 전원을 차단했다면, 현재 이벤트 트리거를 삭제한다.
-			DeleteThisEventTrigger();
-		}
-		else
-		{
-			m_Type = MSG_TYPE_TRIGGER_POWER_DOWN_TOWER;
 		}
 	}
 }
@@ -112,17 +92,17 @@ bool CPowerDownEventTrigger::IsOpened() const
 
 //=========================================================================================================================
 
-CSirenEventTrigger::CSirenEventTrigger(MSG_TYPE Type) : CEventTrigger(Type)
+CSirenEventTrigger::CSirenEventTrigger()
 {
 	m_IsActive = true;
 	m_ActiveFOV = 40.0f;
 }
 
-void CSirenEventTrigger::InteractEventTrigger()
+void CSirenEventTrigger::InteractEventTrigger(UINT CallerIndex)
 {
 	if (!IsInteracted())
 	{
-		CEventTrigger::InteractEventTrigger();
+		CEventTrigger::InteractEventTrigger(CallerIndex);
 
 		vector<vector<shared_ptr<CGameObject>>>& GameObjects{ CServer::m_GameObjects };
 		shared_ptr<CNavMesh> NavMesh{ CServer::m_NavMesh };
@@ -152,15 +132,12 @@ void CSirenEventTrigger::InteractEventTrigger()
 				}
 			}
 		}
-
-		// 사이렌을 작동시켰다면, 현재 이벤트 트리거를 삭제한다.
-		DeleteThisEventTrigger();
 	}
 }
 
 //=========================================================================================================================
 
-COpenGateEventTrigger::COpenGateEventTrigger(MSG_TYPE Type) : CEventTrigger(Type)
+COpenGateEventTrigger::COpenGateEventTrigger()
 {
 	m_IsActive = true;
 	m_ActiveFOV = 70.0f;
@@ -182,13 +159,15 @@ bool COpenGateEventTrigger::CanPassTriggerArea(const XMFLOAT3& Position, const X
 	return true;
 }
 
-void COpenGateEventTrigger::InteractEventTrigger()
+void COpenGateEventTrigger::InteractEventTrigger(UINT CallerIndex)
 {
 	if (!IsInteracted())
 	{
-		if ((CServer::m_CompletedTriggers & MSG_TYPE_TRIGGER_POWER_DOWN_TOWER) && (CServer::m_CompletedTriggers & MSG_TYPE_TRIGGER_SIREN))
+		vector<shared_ptr<CEventTrigger>>& EventTriggers{ CServer::m_EventTriggers };
+
+		if (EventTriggers[0]->IsInteracted() && EventTriggers[1]->IsInteracted())
 		{
-			CEventTrigger::InteractEventTrigger();
+			CEventTrigger::InteractEventTrigger(CallerIndex);
 		}
 	}
 }
@@ -205,31 +184,26 @@ void COpenGateEventTrigger::Update(float ElapsedTime)
 			m_EventObjects[1]->Rotate(WorldUp, 55.0f * ElapsedTime);
 			m_GateAngle += 55.0f * ElapsedTime;
 		}
-		else
-		{
-			// 문이 모두 열렸다면, 현재 이벤트 트리거를 삭제한다.
-			DeleteThisEventTrigger();
-		}
 	}
 }
 
 //=========================================================================================================================
 
-CGetPistolEventTrigger::CGetPistolEventTrigger(MSG_TYPE Type) : CEventTrigger(Type)
+CGetPistolEventTrigger::CGetPistolEventTrigger()
 {
 	m_ActiveFOV = 360.0f;
 }
 
-void CGetPistolEventTrigger::InteractEventTrigger()
+void CGetPistolEventTrigger::InteractEventTrigger(UINT CallerIndex)
 {
 	if (!IsInteracted())
 	{
-		CEventTrigger::InteractEventTrigger();
+		CEventTrigger::InteractEventTrigger(CallerIndex);
 
 		vector<vector<shared_ptr<CGameObject>>>& GameObjects{ CServer::m_GameObjects };
 
 		// 권총을 획득한 경우, 권총으로 무기를 교체하고 UI 또한 주먹에서 권총으로 변경시킨다.
-		shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(GameObjects[OBJECT_TYPE_PLAYER].back()) };
+		shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(GameObjects[OBJECT_TYPE_PLAYER][CallerIndex]) };
 
 		if (!Player->HasPistol())
 		{
@@ -237,26 +211,20 @@ void CGetPistolEventTrigger::InteractEventTrigger()
 		}
 
 		Player->SwapWeapon(WEAPON_TYPE_PISTOL);
-
-		// 권총을 획득했다면, 현재 이벤트 트리거를 삭제한다.
-		DeleteThisEventTrigger();
 	}
 }
 
 //=========================================================================================================================
 
-CGetKeyEventTrigger::CGetKeyEventTrigger(MSG_TYPE Type) : CEventTrigger(Type)
+CGetKeyEventTrigger::CGetKeyEventTrigger()
 {
 	m_ActiveFOV = 360.0f;
 }
 
-void CGetKeyEventTrigger::InteractEventTrigger()
+void CGetKeyEventTrigger::InteractEventTrigger(UINT CallerIndex)
 {
 	if (!IsInteracted())
 	{
-		CEventTrigger::InteractEventTrigger();
-
-		// 열쇠를 획득했다면, 현재 이벤트 트리거를 삭제한다.
-		DeleteThisEventTrigger();
+		CEventTrigger::InteractEventTrigger(CallerIndex);
 	}
 }

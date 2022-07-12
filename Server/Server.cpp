@@ -2,7 +2,6 @@
 #include "Server.h"
 
 MSG_TYPE								CServer::m_MsgType{};
-MSG_TYPE								CServer::m_CompletedTriggers{};
 
 vector<vector<shared_ptr<CGameObject>>> CServer::m_GameObjects{};
 vector<shared_ptr<CEventTrigger>>       CServer::m_EventTriggers{};
@@ -10,6 +9,7 @@ shared_ptr<CNavMesh>                    CServer::m_NavMesh{};
 vector<LIGHT>                           CServer::m_Lights{};
 
 SERVER_TO_CLIENT_DATA                   CServer::m_SendedPacketData{};
+TRIGGER_DATA							CServer::m_TriggerData{};
 
 CServer::CServer()
 {
@@ -197,6 +197,19 @@ DWORD WINAPI CServer::ProcessClient(LPVOID Arg)
                 Server::ErrorDisplay("send()");
                 break;
             }
+
+            if (Server->m_SendedPacketData.m_MsgType & MSG_TYPE_TRIGGER)
+            {
+                ReturnValue = send(ClientSocket, (char*)&Server->m_TriggerData, sizeof(Server->m_TriggerData), 0);
+
+                if (ReturnValue == SOCKET_ERROR)
+                {
+                    Server::ErrorDisplay("send()");
+                    break;
+                }
+
+                memset(&Server->m_TriggerData, NULL, sizeof(Server->m_TriggerData));
+            }
         }
     }
 
@@ -225,13 +238,11 @@ void CServer::BuildObjects()
 
 void CServer::BuildLights()
 {
-    LIGHT Light{};
+    m_Lights.resize(1);
 
-    Light.m_IsActive = true;
-    Light.m_Position = XMFLOAT3(0.0f, 50.0f, 0.0f);
-    Light.m_SpotLightAngle = XMConvertToRadians(90.0f);
-    
-    m_Lights.push_back(Light);
+    m_Lights[0].m_IsActive = true;
+    m_Lights[0].m_Position = XMFLOAT3(0.0f, 50.0f, 0.0f);
+    m_Lights[0].m_SpotLightAngle = XMConvertToRadians(90.0f);
 }
 
 void CServer::LoadSceneInfoFromFile(const tstring& FileName)
@@ -239,6 +250,8 @@ void CServer::LoadSceneInfoFromFile(const tstring& FileName)
     tstring Token{};
 
     shared_ptr<LOADED_MODEL_INFO> ModelInfo{};
+
+    UINT PlayerID{};
     UINT ObjectType{};
 
     unordered_map<tstring, shared_ptr<CMesh>> MeshCaches{};
@@ -277,6 +290,7 @@ void CServer::LoadSceneInfoFromFile(const tstring& FileName)
                 // 플레이어 객체를 생성한다.
                 shared_ptr<CPlayer> Player{ make_shared<CPlayer>() };
 
+                Player->SetID(PlayerID++);
                 Player->SetChild(ModelInfo->m_Model);
                 Player->SetTransformMatrix(TransformMatrix);
                 Player->UpdateTransform(Matrix4x4::Identity());
@@ -386,8 +400,47 @@ void CServer::LoadNavMeshFromFile(const tstring& FileName)
 
 void CServer::LoadEventTriggerFromFile(const tstring& FileName)
 {
-    tstring Token{};
     shared_ptr<CEventTrigger> EventTrigger{};
+
+    // 열쇠를 드롭하는 트리거를 추가한다.
+    // 열쇠는 외형이 다른 교도관(Index: 0, 1)이 보유하고 있다.
+    for (UINT i = 0; i < 2; ++i)
+    {
+        if (m_GameObjects[OBJECT_TYPE_NPC][i])
+        {
+            shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(m_GameObjects[OBJECT_TYPE_NPC][i]) };
+
+            EventTrigger = make_shared<CGetKeyEventTrigger>();
+            Guard->SetEventTrigger(EventTrigger);
+
+            m_EventTriggers.push_back(EventTrigger);
+        }
+    }
+
+    // 권총을 드롭하는 트리거를 추가한다.
+    // 권총은 열쇠를 갖지 않은 임의의 교도관(Index: 2 ~ 14) 중 5명이 보유하고 있다.
+    vector<UINT> Indices{};
+
+    Indices.resize(m_GameObjects[OBJECT_TYPE_NPC].size() - 2);
+    iota(Indices.begin(), Indices.end(), 2);
+    shuffle(Indices.begin(), Indices.end(), default_random_engine{ random_device{}() });
+    sort(Indices.begin(), Indices.begin() + 5);
+
+    for (UINT i = 0; i < 5; ++i)
+    {
+        if (m_GameObjects[OBJECT_TYPE_NPC][Indices[i]])
+        {
+            shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(m_GameObjects[OBJECT_TYPE_NPC][Indices[i]]) };
+
+            EventTrigger = make_shared<CGetPistolEventTrigger>();
+            Guard->SetEventTrigger(EventTrigger);
+
+            m_EventTriggers.push_back(EventTrigger);
+            m_HasPistolGuardIndices[i] = Indices[i];
+        }
+    }
+
+    tstring Token{};
 
     tcout << FileName << TEXT(" 로드 시작...") << endl;
 
@@ -405,22 +458,21 @@ void CServer::LoadEventTriggerFromFile(const tstring& FileName)
         }
         else if (Token == TEXT("<Type>"))
         {
-            MSG_TYPE TriggerType{ static_cast<MSG_TYPE>(File::ReadIntegerFromFile(InFile)) };
+            TRIGGER_TYPE TriggerType{ static_cast<TRIGGER_TYPE>(File::ReadIntegerFromFile(InFile)) };
 
             switch (TriggerType)
             {
-            case MSG_TYPE_TRIGGER_OPEN_PRISON_DOOR:
-            case MSG_TYPE_TRIGGER_OPEN_GUARDPOST_DOOR:
-                EventTrigger = make_shared<COpenDoorEventTrigger>(TriggerType);
+            case TRIGGER_TYPE_OPEN_DOOR:
+                EventTrigger = make_shared<COpenDoorEventTrigger>();
                 break;
-            case MSG_TYPE_TRIGGER_OPEN_ELEC_PANEL:
-                EventTrigger = make_shared<CPowerDownEventTrigger>(TriggerType);
+            case TRIGGER_TYPE_OPEN_ELEC_PANEL:
+                EventTrigger = make_shared<CPowerDownEventTrigger>();
                 break;
-            case MSG_TYPE_TRIGGER_SIREN:
-                EventTrigger = make_shared<CSirenEventTrigger>(TriggerType);
+            case TRIGGER_TYPE_SIREN:
+                EventTrigger = make_shared<CSirenEventTrigger>();
                 break;
-            case MSG_TYPE_TRIGGER_OPEN_GATE:
-                EventTrigger = make_shared<COpenGateEventTrigger>(TriggerType);
+            case TRIGGER_TYPE_OPEN_GATE:
+                EventTrigger = make_shared<COpenGateEventTrigger>();
                 break;
             }
 
@@ -434,44 +486,6 @@ void CServer::LoadEventTriggerFromFile(const tstring& FileName)
     }
 
     tcout << FileName << TEXT(" 로드 완료...") << endl << endl;
-
-    // 권총을 드롭하는 트리거를 추가한다.
-    // 권총은 열쇠를 갖지 않은 임의의 교도관(Index: 2 ~ 14) 중 5명이 보유하고 있다.
-    vector<UINT> Indices{};
-
-    Indices.resize(m_GameObjects[OBJECT_TYPE_NPC].size() - 2);
-    iota(Indices.begin(), Indices.end(), 2);
-    shuffle(Indices.begin(), Indices.end(), default_random_engine{ random_device{}() });
-    sort(Indices.begin(), Indices.begin() + 5);
-
-    for (UINT i = 0 ; i < 5 ; ++i)
-    {
-    	if (m_GameObjects[OBJECT_TYPE_NPC][Indices[i]])
-    	{
-    		shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(m_GameObjects[OBJECT_TYPE_NPC][Indices[i]]) };
-
-    		EventTrigger = make_shared<CGetPistolEventTrigger>(MSG_TYPE_NONE);
-    		Guard->SetEventTrigger(EventTrigger);
-
-    		m_EventTriggers.push_back(EventTrigger);
-            m_HasPistolGuardIndices[i] = Indices[i];
-    	}
-    }
-
-    // 열쇠를 드롭하는 트리거를 추가한다.
-    // 열쇠는 외형이 다른 교도관(Index: 0, 1)이 보유하고 있다.
-    for (UINT i = 0; i < 2; ++i)
-    {
-    	if (m_GameObjects[OBJECT_TYPE_NPC][i])
-    	{
-    		shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(m_GameObjects[OBJECT_TYPE_NPC][i]) };
-
-    		EventTrigger = make_shared<CGetKeyEventTrigger>(MSG_TYPE_NONE);
-    		Guard->SetEventTrigger(EventTrigger);
-
-    		m_EventTriggers.push_back(EventTrigger);
-    	}
-    }
 }
 
 UINT CServer::GetValidClientID() const
@@ -566,18 +580,26 @@ void CServer::UpdatePlayerInfo()
 
 void CServer::Animate(float ElapsedTime)
 {
-    for (UINT i = OBJECT_TYPE_PLAYER; i <= OBJECT_TYPE_STRUCTURE; ++i)
+    for (UINT i = OBJECT_TYPE_PLAYER; i <= OBJECT_TYPE_NPC; ++i)
     {
         for (const auto& GameObject : m_GameObjects[i])
         {
             if (GameObject)
             {
                 GameObject->Animate(ElapsedTime);
-                GameObject->UpdateTransform(Matrix4x4::Identity());
             }
         }
     }
 
+    for (const auto& GameObject : m_GameObjects[OBJECT_TYPE_STRUCTURE])
+    {
+        if (GameObject)
+        {
+            GameObject->Animate(ElapsedTime);
+            GameObject->UpdateTransform(Matrix4x4::Identity());
+        }
+    }
+   
     // 상호작용이 일어난 모든 트리거의 작업을 수행한다.
     for (const auto& EventTrigger : m_EventTriggers)
     {

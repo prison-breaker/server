@@ -25,6 +25,16 @@ void CPlayer::Animate(float ElapsedTime)
 	}
 }
 
+void CPlayer::SetID(UINT ID)
+{
+	m_ID = ID;
+}
+
+UINT CPlayer::GetID() const
+{
+	return m_ID;
+}
+
 void CPlayer::SetHealth(UINT Health)
 {
 	// UINT UnderFlow
@@ -206,28 +216,37 @@ bool CPlayer::IsCollidedByGuard(const XMFLOAT3& NewPosition)
 bool CPlayer::IsCollidedByEventTrigger(const XMFLOAT3& NewPosition, bool IsInteracted)
 {
 	vector<shared_ptr<CEventTrigger>>& EventTriggers{ CServer::m_EventTriggers };
+	UINT TriggerCount{ static_cast<UINT>(EventTriggers.size()) };
 
-	for (auto iter = EventTriggers.begin(); iter != EventTriggers.end(); ++iter)
+	for (UINT i = 0; i < TriggerCount; ++i)
 	{
-		shared_ptr<CEventTrigger> EventTrigger = *iter;
-
-		if (EventTrigger)
+		if (EventTriggers[i])
 		{
-			if (EventTrigger->IsInTriggerArea(GetPosition(), GetLook()))
+			if (EventTriggers[i]->IsInTriggerArea(GetPosition(), GetLook()))
 			{
 				if (IsInteracted)
 				{
-					EventTrigger->InteractEventTrigger();
+					EventTriggers[i]->InteractEventTrigger(GetID());
+
+					CServer::m_MsgType |= MSG_TYPE_TRIGGER;
+
+					UINT Index{ CServer::m_TriggerData.m_Size++ };
+
+					CServer::m_TriggerData.m_TriggerIndexStack[Index] = i;
+
+					// 만약 트리거가 열쇠나 권총 획득 트리거라면, 습득한 플레이어의 인덱스 값을 기록한다.
+					if (i <= 6)
+					{
+						CServer::m_TriggerData.m_CallerIndexStack[Index] = GetID();
+					}
 				}
 
-				if (EventTrigger->CanPassTriggerArea(GetPosition(), NewPosition))
+				if (EventTriggers[i]->CanPassTriggerArea(GetPosition(), NewPosition))
 				{
 					return false;
 				}
-				else
-				{
-					return true;
-				}
+
+				return true;
 			}
 		}
 	}

@@ -7,12 +7,11 @@ private:
 	float m_DoorAngle{};
 
 public:
-	COpenDoorEventTrigger(MSG_TYPE Type);
+	COpenDoorEventTrigger();
 	virtual ~COpenDoorEventTrigger() = default;
 
 	virtual bool CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition);
 
-	virtual void InteractEventTrigger();
 	virtual void Update(float ElapsedTime);
 };
 
@@ -26,10 +25,10 @@ private:
 	float m_PanelAngle{};
 
 public:
-	CPowerDownEventTrigger(MSG_TYPE Type);
+	CPowerDownEventTrigger();
 	virtual ~CPowerDownEventTrigger() = default;
 
-	virtual void InteractEventTrigger();
+	virtual void InteractEventTrigger(UINT CallerIndex);
 	virtual void Update(float ElapsedTime);
 
 	bool IsOpened() const;
@@ -40,10 +39,10 @@ public:
 class CSirenEventTrigger : public CEventTrigger
 {
 public:
-	CSirenEventTrigger(MSG_TYPE Type);
+	CSirenEventTrigger();
 	virtual ~CSirenEventTrigger() = default;
 
-	virtual void InteractEventTrigger();
+	virtual void InteractEventTrigger(UINT CallerIndex);
 };
 
 //=========================================================================================================================
@@ -54,12 +53,12 @@ private:
 	float m_GateAngle{};
 
 public:
-	COpenGateEventTrigger(MSG_TYPE Type);
+	COpenGateEventTrigger();
 	virtual ~COpenGateEventTrigger() = default;
 
 	virtual bool CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition);
 
-	virtual void InteractEventTrigger();
+	virtual void InteractEventTrigger(UINT CallerIndex);
 	virtual void Update(float ElapsedTime);
 };
 
@@ -68,10 +67,10 @@ public:
 class CGetPistolEventTrigger : public CEventTrigger
 {
 public:
-	CGetPistolEventTrigger(MSG_TYPE Type);
+	CGetPistolEventTrigger();
 	virtual ~CGetPistolEventTrigger() = default;
 
-	virtual void InteractEventTrigger();
+	virtual void InteractEventTrigger(UINT CallerIndex);
 };
 
 //=========================================================================================================================
@@ -79,8 +78,8 @@ public:
 class CGetKeyEventTrigger : public CEventTrigger
 {
 public:
-	CGetKeyEventTrigger(MSG_TYPE Type);
+	CGetKeyEventTrigger();
 	virtual ~CGetKeyEventTrigger() = default;
 
-	virtual void InteractEventTrigger();
+	virtual void InteractEventTrigger(UINT CallerIndex);
 };
