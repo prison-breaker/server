@@ -256,6 +256,44 @@ bool CPlayer::IsCollidedByEventTrigger(const XMFLOAT3& NewPosition, bool IsInter
 
 void CPlayer::ProcessInput(float ElapsedTime, UINT InputMask)
 {
+	if (InputMask & INPUT_MASK_NUM1)
+	{
+		if (IsEquippedPistol())
+		{
+			if (SwapWeapon(WEAPON_TYPE_PUNCH))
+			{
+				switch (GetID())
+				{
+				case 0:
+					CServer::m_MsgType |= MSG_TYPE_PLAYER1_WEAPON_SWAP;
+					break;
+				case 1:
+					CServer::m_MsgType |= MSG_TYPE_PLAYER2_WEAPON_SWAP;
+					break;
+				}
+			}
+		}
+	}
+
+	if (InputMask & INPUT_MASK_NUM2)
+	{
+		if (!IsEquippedPistol())
+		{
+			if (SwapWeapon(WEAPON_TYPE_PISTOL))
+			{
+				switch (GetID())
+				{
+				case 0:
+					CServer::m_MsgType |= MSG_TYPE_PLAYER1_WEAPON_SWAP;
+					break;
+				case 1:
+					CServer::m_MsgType |= MSG_TYPE_PLAYER2_WEAPON_SWAP;
+					break;
+				}
+			}
+		}
+	}
+
 	if (m_StateMachine)
 	{
 		m_StateMachine->ProcessInput(ElapsedTime, InputMask);

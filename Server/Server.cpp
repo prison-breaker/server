@@ -207,8 +207,6 @@ DWORD WINAPI CServer::ProcessClient(LPVOID Arg)
                     Server::ErrorDisplay("send()");
                     break;
                 }
-
-                memset(&Server->m_TriggerData, NULL, sizeof(Server->m_TriggerData));
             }
         }
     }
@@ -550,7 +548,6 @@ void CServer::GameLoop()
 
         m_Timer->Tick(0.0f);
 
-
         UpdatePlayerInfo();
         Animate(m_Timer->GetElapsedTime());
         UpdateSendedPacketData();
@@ -562,6 +559,8 @@ void CServer::GameLoop()
 
 void CServer::UpdatePlayerInfo()
 {
+    memset(&m_TriggerData, NULL, sizeof(m_TriggerData));
+
     for (UINT i = 0; i < MAX_CLIENT_CAPACITY; ++i)
     {
         if (m_GameObjects[OBJECT_TYPE_PLAYER][i])
