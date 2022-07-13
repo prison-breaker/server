@@ -187,6 +187,27 @@ DWORD WINAPI CServer::ProcessClient(LPVOID Arg)
                 break;
             }
 
+            if ((Server->m_ReceivedPacketData[ClientID].m_InputMask & INPUT_MASK_LMB) && (Server->m_ReceivedPacketData[ClientID].m_InputMask & INPUT_MASK_RMB))
+            {
+                XMFLOAT3 CameraPosition{};
+
+                ReturnValue = recv(ClientSocket, (char*)&CameraPosition, sizeof(CameraPosition), MSG_WAITALL);
+
+                if (ReturnValue == SOCKET_ERROR)
+                {
+                    Server::ErrorDisplay("recv()");
+                    break;
+                }
+                else if (ReturnValue == 0)
+                {
+                    break;
+                }
+
+                shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(Server->m_GameObjects[OBJECT_TYPE_PLAYER][ClientID]) };
+
+                Player->SetCameraPosition(CameraPosition);
+            }
+
             SetEvent(Server->m_ClientSyncEvents[ClientID]);
             WaitForSingleObject(Server->m_MainSyncEvents[1], INFINITE);
 

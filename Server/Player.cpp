@@ -73,6 +73,16 @@ const XMFLOAT3& CPlayer::GetMovingDirection() const
 	return m_MovingDirection;
 }
 
+void CPlayer::SetCameraPosition(const XMFLOAT3& CameraPosition)
+{
+	m_CameraPosition = CameraPosition;
+}
+
+const XMFLOAT3& CPlayer::GetCameraPosition() const
+{
+	return m_CameraPosition;
+}
+
 shared_ptr<CStateMachine<CPlayer>> CPlayer::GetStateMachine() const
 {
 	return m_StateMachine;

@@ -67,18 +67,6 @@ CAnimationController::CAnimationController(const shared_ptr<LOADED_MODEL_INFO>& 
 	m_AnimationClips.assign(ModelInfo->m_AnimationClips.begin(), ModelInfo->m_AnimationClips.end());
 	m_BoneFrameCaches.assign(ModelInfo->m_BoneFrameCaches.begin(), ModelInfo->m_BoneFrameCaches.end());
 	m_SkinnedMeshCaches.assign(ModelInfo->m_SkinnedMeshCaches.begin(), ModelInfo->m_SkinnedMeshCaches.end());
-
-	//UINT Bytes{ ((sizeof(XMFLOAT4X4) * MAX_BONES) + 255) & ~255 };
-	//UINT SkinnedMeshCount{ static_cast<UINT>(m_SkinnedMeshCaches.size()) };
-
-	//m_D3D12BoneTransformMatrixes.resize(SkinnedMeshCount);
-	//m_MappedBoneTransformMatrixes.resize(SkinnedMeshCount);
-
-	//for (UINT i = 0; i < SkinnedMeshCount; ++i)
-	//{
-	//	m_D3D12BoneTransformMatrixes[i] = DX::CreateBufferResource(D3D12Device, D3D12GraphicsCommandList, nullptr, Bytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, nullptr);
-	//	m_D3D12BoneTransformMatrixes[i]->Map(0, nullptr, reinterpret_cast<void**>(&m_MappedBoneTransformMatrixes[i]));
-	//}
 }
 
 void CAnimationController::SetActive(bool IsActive)
@@ -126,29 +114,23 @@ UINT CAnimationController::GetKeyFrameIndex() const
 
 void CAnimationController::UpdateShaderVariables()
 {
-	//UINT SkinnedMeshCount{ static_cast<UINT>(m_SkinnedMeshCaches.size()) };
+	UINT SkinnedMeshCount{ static_cast<UINT>(m_SkinnedMeshCaches.size()) };
 
-	//// 공유되는 스킨 메쉬에 현재 애니메이션 컨트롤러의 뼈 변환 행렬 리소스를 설정해준다.
-	//for (UINT i = 0; i < SkinnedMeshCount; ++i)
-	//{
-	//	m_SkinnedMeshCaches[i]->SetBoneTransformInfo(m_D3D12BoneTransformMatrixes[i], m_MappedBoneTransformMatrixes[i]);
-	//}
+	// 이번 프레임의 애니메이션 변환 행렬을 각 뼈 프레임에 변환 행렬로 설정한다.
+	for (UINT i = 0; i < SkinnedMeshCount; ++i)
+	{
+		UINT BoneFrameCount{ static_cast<UINT>(m_BoneFrameCaches[i].size()) };
 
-	//// 이번 프레임의 애니메이션 변환 행렬을 각 뼈 프레임에 변환 행렬로 설정한다.
-	//for (UINT i = 0; i < SkinnedMeshCount; ++i)
-	//{
-	//	UINT BoneFrameCount{ static_cast<UINT>(m_BoneFrameCaches[i].size()) };
+		for (UINT j = 0; j < BoneFrameCount; ++j)
+		{
+			m_BoneFrameCaches[i][j]->SetTransformMatrix(m_AnimationClips[m_ClipType]->m_BoneTransformMatrixes[i][j][m_KeyFrameIndex]);
+		}
+	}
 
-	//	for (UINT j = 0; j < BoneFrameCount; ++j)
-	//	{
-	//		m_BoneFrameCaches[i][j]->SetTransformMatrix(m_AnimationClips[m_ClipType]->m_BoneTransformMatrixes[i][j][m_KeyFrameIndex]);
-	//	}
-	//}
-
-	//if (m_Owner)
-	//{
-	//	m_Owner->UpdateTransform(Matrix4x4::Identity());
-	//}
+	if (m_Owner)
+	{
+		m_Owner->UpdateTransform(Matrix4x4::Identity());
+	}
 }
 
 bool CAnimationController::UpdateAnimationClip(ANIMATION_TYPE AnimationType)

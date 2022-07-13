@@ -15,7 +15,9 @@ private:
 	XMFLOAT3						   m_MovingDirection{};
 
 	shared_ptr<CGameObject>            m_PistolFrame{};
-									   
+								
+	XMFLOAT3						   m_CameraPosition{};
+
 	shared_ptr<CStateMachine<CPlayer>> m_StateMachine{};
 
 public:
@@ -37,6 +39,9 @@ public:
 
 	void SetMovingDirection(const XMFLOAT3& MovingDirection);
 	const XMFLOAT3& GetMovingDirection() const;
+
+	void SetCameraPosition(const XMFLOAT3& CameraPosition);
+	const XMFLOAT3& GetCameraPosition() const;
 
 	shared_ptr<CStateMachine<CPlayer>> GetStateMachine() const;
 

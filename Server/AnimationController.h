@@ -43,8 +43,6 @@ private:
 	vector<shared_ptr<CSkinnedMesh>>        m_SkinnedMeshCaches{};
 	vector<vector<shared_ptr<CGameObject>>> m_BoneFrameCaches{}; // [SkinnedMesh][Bone]
 
-	vector<XMFLOAT4X4*>				        m_MappedBoneTransformMatrixes{};
-
 public:
 	CAnimationController(const shared_ptr<LOADED_MODEL_INFO>& ModelInfo, const shared_ptr<CGameObject>& Owner);
 	~CAnimationController() = default;
