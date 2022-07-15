@@ -347,25 +347,17 @@ void CGuardShootingState::Enter(const shared_ptr<CGuard>& Entity)
 	Entity->GetAnimationController()->SetAnimationClipType(ANIMATION_CLIP_TYPE_NPC_SHOOT);
 	Entity->SetSpeed(0.0f);
 
-	//shared_ptr<CGameScene> GameScene{ static_pointer_cast<CGameScene>(CSceneManager::GetInstance()->GetCurrentScene()) };
-	//vector<vector<shared_ptr<CBilboardObject>>>& BilboardObjects{ GameScene->GetBilboardObjects() };
+	if (!CServer::m_InvincibleMode)
+	{
+		shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(Entity->GetTarget()) };
 
-	//// 피격 UI 애니메이션을 재생시키고, UI 체력을 1감소시킨다.
-	//static_pointer_cast<CHitUI>(BilboardObjects[BILBOARD_OBJECT_TYPE_UI][10])->GetStateMachine()->SetCurrentState(CHitUIActivationState::GetInstance());
+		Player->SetHealth(Player->GetHealth() - 10);
 
-	//if (!GameScene->IsInvincibleMode())
-	//{
-	//	BilboardObjects[BILBOARD_OBJECT_TYPE_UI][3]->SetVertexCount(BilboardObjects[BILBOARD_OBJECT_TYPE_UI][3]->GetVertexCount() - 1);
-
-	//	shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(Entity->GetTarget()) };
-
-	//	Player->SetHealth(Player->GetHealth() - 10);
-
-	//	if (Player->GetHealth() <= 0)
-	//	{
-	//		Player->GetStateMachine()->ChangeState(CPlayerDyingState::GetInstance());
-	//	}
-	//}
+		if (Player->GetHealth() <= 0)
+		{
+			Player->GetStateMachine()->ChangeState(CPlayerDyingState::GetInstance());
+		}
+	}
 }
 
 void CGuardShootingState::ProcessInput(const shared_ptr<CGuard>& Entity, float ElapsedTime, UINT InputMask)

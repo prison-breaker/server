@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Server.h"
 
+bool									CServer::m_InvincibleMode{};
+
 MSG_TYPE								CServer::m_MsgType{};
 
 vector<vector<shared_ptr<CGameObject>>> CServer::m_GameObjects{};
@@ -242,7 +244,7 @@ void CServer::CreateEvents()
     m_MainSyncEvents[0] = CreateEvent(NULL, TRUE, FALSE, NULL);
     m_MainSyncEvents[1] = CreateEvent(NULL, TRUE, FALSE, NULL);
 
-    for (UINT i = 0; i < MAX_CLIENT_CAPACITY; ++i)
+    for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
     {
         m_ClientSyncEvents[i] = CreateEvent(NULL, FALSE, FALSE, NULL);
     }
@@ -358,7 +360,7 @@ void CServer::LoadSceneInfoFromFile(const tstring& FileName)
         }
         else if (Token == TEXT("</GameScene>"))
         {
-            for (UINT i = 0; i < MAX_CLIENT_CAPACITY; ++i)
+            for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
             {
                 m_ReceivedPacketData[i].m_WorldMatrix = m_GameObjects[OBJECT_TYPE_PLAYER][i]->GetWorldMatrix();
             }
@@ -509,7 +511,7 @@ void CServer::LoadEventTriggerFromFile(const tstring& FileName)
 
 UINT CServer::GetValidClientID() const
 {
-    for (UINT i = 0; i < MAX_CLIENT_CAPACITY; ++i)
+    for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
     {
         if (!m_ClientSocketInfos[i].m_Socket)
         {
@@ -559,7 +561,7 @@ void CServer::GameLoop()
         ResetEvent(m_MainSyncEvents[1]);
         SetEvent(m_MainSyncEvents[0]);
 
-        for (UINT i = 0; i < MAX_CLIENT_CAPACITY; ++i)
+        for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
         {
             if (m_ClientSocketInfos[i].m_Socket)
             {
@@ -569,6 +571,7 @@ void CServer::GameLoop()
 
         m_Timer->Tick(0.0f);
 
+        ProcessInput();
         UpdatePlayerInfo();
         Animate(m_Timer->GetElapsedTime());
         UpdateSendedPacketData();
@@ -578,11 +581,30 @@ void CServer::GameLoop()
     }
 }
 
+void CServer::ProcessInput()
+{
+    if (GetAsyncKeyState('I') & 0x0001)
+    {
+        if (m_InvincibleMode)
+        {
+            m_InvincibleMode = false;
+
+            tcout << TEXT("무적모드를 비활성화합니다.") << endl;
+        }
+        else
+        {
+            m_InvincibleMode = true;
+
+            tcout << TEXT("무적모드를 활성화합니다.") << endl;
+        }
+    }
+}
+
 void CServer::UpdatePlayerInfo()
 {
     memset(&m_TriggerData, NULL, sizeof(m_TriggerData));
 
-    for (UINT i = 0; i < MAX_CLIENT_CAPACITY; ++i)
+    for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
     {
         if (m_GameObjects[OBJECT_TYPE_PLAYER][i])
         {
@@ -713,10 +735,10 @@ void CServer::CalculateTowerLightCollision()
 
 void CServer::UpdateSendedPacketData()
 {
-    m_SendedPacketData.m_MsgType = m_MsgType;
+    m_SendedPacketData.m_MsgType = (m_ConnectedClientCount == 2) ? m_MsgType : MSG_TYPE_DISCONNECTION;
     m_MsgType = MSG_TYPE_NONE;
 
-    for (UINT i = 0; i < MAX_CLIENT_CAPACITY; ++i)
+    for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
     {
         m_SendedPacketData.m_PlayerWorldMatrices[i] = m_GameObjects[OBJECT_TYPE_PLAYER][i]->GetWorldMatrix();
         m_SendedPacketData.m_PlayerAnimationClipTypes[i] = m_GameObjects[OBJECT_TYPE_PLAYER][i]->GetAnimationController()->GetAnimationClipType();

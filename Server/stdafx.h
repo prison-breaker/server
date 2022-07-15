@@ -1,7 +1,4 @@
 #pragma once
-#pragma comment(lib, "ws2_32")
-
-#include "targetver.h"
 
 // 거의 사용되지 않는 내용을 Windows 헤더에서 제외합니다.
 #define WIN32_LEAN_AND_MEAN      
@@ -9,10 +6,10 @@
 
 #define EPSILON			     1.0e-10f
 
-#define MAX_CLIENT_CAPACITY  2
-#define MAX_NPC_COUNT		 15
-
 #define SERVER_PORT          9000
+
+#define MAX_PLAYER_CAPACITY  2
+#define MAX_NPC_COUNT		 15
 
 #define INPUT_MASK_NONE		 0x0000
 #define INPUT_MASK_W	     0x0001
@@ -27,6 +24,56 @@
 #define INPUT_MASK_NUM1		 0x0200
 #define INPUT_MASK_NUM2		 0x0400
 
+// SDKDDKVer.h를 포함하면 최고 수준의 가용성을 가진 Windows 플랫폼이 정의됩니다.
+// 이전 Windows 플랫폼용 애플리케이션을 빌드하려는 경우에는 SDKDDKVer.h를 포함하기 전에
+// WinSDKVer.h를 포함하고 _WIN32_WINNT를 지원하려는 플랫폼으로 설정합니다.
+#include <SDKDDKVer.h>
+
+// C 런타임 헤더 파일입니다.
+#pragma comment(lib, "ws2_32")
+#include <winsock2.h>
+#include <tchar.h>
+#include <memory.h>
+
+// C++ 런타임 헤더 파일입니다.
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <queue>
+#include <numeric>
+#include <random>
+
+using namespace std;
+
+// DirectX Header
+#include <DirectXMath.h>
+#include <DirectXPackedVector.h>
+#include <DirectXColors.h>
+#include <DirectXCollision.h>
+
+using namespace DirectX;
+using namespace DirectX::PackedVector;
+
+#ifdef _UNICODE
+#define tcout wcout
+#define tcin  wcin
+#else
+#define tcout cout
+#define tcin  cin
+#endif
+
+typedef basic_string<TCHAR>        tstring;
+typedef basic_istream<TCHAR>       tistream;
+typedef basic_ostream<TCHAR>       tostream;
+typedef basic_fstream<TCHAR>       tfstream;
+typedef basic_ifstream<TCHAR>      tifstream;
+typedef basic_ofstream<TCHAR>      tofstream;
+typedef basic_stringstream<TCHAR>  tstringstream;
+typedef basic_istringstream<TCHAR> tistringstream;
+typedef basic_ostringstream<TCHAR> tostringstream;
+
 enum MSG_TYPE
 {
 	MSG_TYPE_NONE                = 0x0000,
@@ -34,7 +81,10 @@ enum MSG_TYPE
 	MSG_TYPE_INGAME              = 0x0002,
 	MSG_TYPE_TRIGGER             = 0x0004,
 	MSG_TYPE_PLAYER1_WEAPON_SWAP = 0x0008,
-	MSG_TYPE_PLAYER2_WEAPON_SWAP = 0x0010
+	MSG_TYPE_PLAYER2_WEAPON_SWAP = 0x0010,
+	MSG_TYPE_DISCONNECTION       = 0x0020,
+	MSG_TYPE_GAME_OVER           = 0x0040,
+	MSG_TYPE_GAME_CLEAR          = 0x0080
 };
 
 static MSG_TYPE& operator |=(MSG_TYPE& a, MSG_TYPE b)
@@ -95,52 +145,6 @@ enum TRIGGER_TYPE
 	TRIGGER_TYPE_OPEN_GATE
 };
 
-// Windows 헤더 파일
-#include <winsock2.h>
-
-// C 런타임 헤더 파일입니다.
-#include <stdlib.h>
-#include <malloc.h>
-#include <memory.h>
-#include <tchar.h>
-
-// C++ 런타임 헤더 파일입니다.
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <unordered_map>
-#include <queue>
-#include <numeric>
-#include <random>
-using namespace std;
-
-// DirectX Header
-#include <DirectXMath.h>
-#include <DirectXPackedVector.h>
-#include <DirectXColors.h>
-#include <DirectXCollision.h>
-using namespace DirectX;
-using namespace DirectX::PackedVector;
-
-#ifdef _UNICODE
-#define tcout wcout
-#define tcin  wcin
-#else
-#define tcout cout
-#define tcin  cin
-#endif
-
-typedef basic_string<TCHAR>        tstring;
-typedef basic_istream<TCHAR>       tistream;
-typedef basic_ostream<TCHAR>       tostream;
-typedef basic_fstream<TCHAR>       tfstream;
-typedef basic_ifstream<TCHAR>      tifstream;
-typedef basic_ofstream<TCHAR>      tofstream;
-typedef basic_stringstream<TCHAR>  tstringstream;
-typedef basic_istringstream<TCHAR> tistringstream;
-typedef basic_ostringstream<TCHAR> tostringstream;
-
 struct SOCKET_INFO
 {
 	UINT		m_ID{};
@@ -176,17 +180,13 @@ struct SERVER_TO_CLIENT_DATA
 {
 	MSG_TYPE			m_MsgType;
 
-	XMFLOAT4X4          m_PlayerWorldMatrices[MAX_CLIENT_CAPACITY]{};
-	ANIMATION_CLIP_TYPE m_PlayerAnimationClipTypes[MAX_CLIENT_CAPACITY]{};
+	XMFLOAT4X4          m_PlayerWorldMatrices[MAX_PLAYER_CAPACITY]{};
+	ANIMATION_CLIP_TYPE m_PlayerAnimationClipTypes[MAX_PLAYER_CAPACITY]{};
 
 	XMFLOAT4X4          m_NPCWorldMatrices[MAX_NPC_COUNT]{};
 	ANIMATION_CLIP_TYPE m_NPCAnimationClipTypes[MAX_NPC_COUNT]{};
 
 	XMFLOAT3            m_TowerLightDirection{};
-
-	// 1. Scene's State - UINT
-	// 4. UI and Trigger's Activation Condition - bool
-	// 6. Sound Play Condition and Volume - bool and float
 };
 
 namespace File
