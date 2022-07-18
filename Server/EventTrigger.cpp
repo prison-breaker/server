@@ -1,6 +1,11 @@
 #include "stdafx.h"
 #include "Server.h"
 
+void CEventTrigger::Reset()
+{
+	SetInteracted(false);
+}
+
 bool CEventTrigger::CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition)
 {
 	return true;

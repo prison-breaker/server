@@ -26,9 +26,10 @@ public:
 
 	void SetCurrentState(CState<EntityType>* State)
 	{
-		if (State)
+		m_CurrentState = State;
+
+		if (m_CurrentState)
 		{
-			m_CurrentState = State;
 			m_CurrentState->Enter(m_Owner);
 		}
 	}

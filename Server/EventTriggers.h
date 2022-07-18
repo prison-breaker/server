@@ -10,6 +10,8 @@ public:
 	COpenDoorEventTrigger();
 	virtual ~COpenDoorEventTrigger() = default;
 
+	virtual void Reset();
+
 	virtual bool CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition);
 
 	virtual void Update(float ElapsedTime);
@@ -28,6 +30,8 @@ public:
 	CPowerDownEventTrigger();
 	virtual ~CPowerDownEventTrigger() = default;
 
+	virtual void Reset();
+
 	virtual void InteractEventTrigger(UINT CallerIndex);
 	virtual void Update(float ElapsedTime);
 
@@ -41,6 +45,8 @@ class CSirenEventTrigger : public CEventTrigger
 public:
 	CSirenEventTrigger();
 	virtual ~CSirenEventTrigger() = default;
+
+	virtual void Reset();
 
 	virtual void InteractEventTrigger(UINT CallerIndex);
 };
@@ -56,6 +62,8 @@ public:
 	COpenGateEventTrigger();
 	virtual ~COpenGateEventTrigger() = default;
 
+	virtual void Reset();
+
 	virtual bool CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition);
 
 	virtual void InteractEventTrigger(UINT CallerIndex);
@@ -70,6 +78,8 @@ public:
 	CGetPistolEventTrigger();
 	virtual ~CGetPistolEventTrigger() = default;
 
+	virtual void Reset();
+
 	virtual void InteractEventTrigger(UINT CallerIndex);
 };
 
@@ -80,6 +90,8 @@ class CGetKeyEventTrigger : public CEventTrigger
 public:
 	CGetKeyEventTrigger();
 	virtual ~CGetKeyEventTrigger() = default;
+
+	virtual void Reset();
 
 	virtual void InteractEventTrigger(UINT CallerIndex);
 };

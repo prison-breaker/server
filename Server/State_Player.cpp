@@ -297,6 +297,11 @@ void CPlayerPunchingState::Enter(const shared_ptr<CPlayer>& Entity)
 					}
 
 					Guard->GetStateMachine()->ChangeState(CGuardHitState::GetInstance());
+
+					CServer::m_MsgType |= MSG_TYPE_PLAYER_ATTACK;
+					CServer::m_PlayerAttackData.m_TargetIndices[Entity->GetID()] = Guard->GetID();
+
+					break;
 				}
 			}
 		}
@@ -411,6 +416,9 @@ void CPlayerShootingState::ProcessInput(const shared_ptr<CPlayer>& Entity, float
 					{
 						Guard->SetTarget(Entity);
 						Guard->GetStateMachine()->ChangeState(CGuardHitState::GetInstance());
+
+						CServer::m_MsgType |= MSG_TYPE_PLAYER_ATTACK;
+						CServer::m_PlayerAttackData.m_TargetIndices[Entity->GetID()] = Guard->GetID();
 					}
 				}
 

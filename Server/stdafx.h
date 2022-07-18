@@ -82,9 +82,11 @@ enum MSG_TYPE
 	MSG_TYPE_TRIGGER             = 0x0004,
 	MSG_TYPE_PLAYER1_WEAPON_SWAP = 0x0008,
 	MSG_TYPE_PLAYER2_WEAPON_SWAP = 0x0010,
-	MSG_TYPE_DISCONNECTION       = 0x0020,
-	MSG_TYPE_GAME_OVER           = 0x0040,
-	MSG_TYPE_GAME_CLEAR          = 0x0080
+	MSG_TYPE_PLAYER_ATTACK		 = 0x0020,
+	MSG_TYPE_GUARD_ATTACK		 = 0x0040,
+	MSG_TYPE_DISCONNECTION       = 0x0080,
+	MSG_TYPE_GAME_OVER           = 0x0100,
+	MSG_TYPE_GAME_CLEAR          = 0x0200
 };
 
 static MSG_TYPE& operator |=(MSG_TYPE& a, MSG_TYPE b)
@@ -93,6 +95,12 @@ static MSG_TYPE& operator |=(MSG_TYPE& a, MSG_TYPE b)
 
 	return a;
 }
+
+enum SCENE_TYPE
+{
+	SCENE_TYPE_TITLE,
+	SCENE_TYPE_INGAME,
+};
 
 enum OBJECT_TYPE
 {
@@ -162,10 +170,26 @@ struct LIGHT
 	float      m_SpotLightAngle{};
 };
 
+struct INIT_GAME_DATA
+{
+	vector<XMFLOAT4X4> m_PlayerInitTransformMatrixes{};
+	vector<XMFLOAT4X4> m_NPCInitTransformMatrixes{};
+};
+
 struct CLIENT_TO_SERVER_DATA
 {
 	UINT	   m_InputMask{};
 	XMFLOAT4X4 m_WorldMatrix{};
+};
+
+struct PLAYER_ATTACK_DATA
+{
+	UINT m_TargetIndices[MAX_PLAYER_CAPACITY]{};
+};
+
+struct GUARD_ATTACK_DATA
+{
+	UINT m_TargetIndices[MAX_NPC_COUNT]{};
 };
 
 struct TRIGGER_DATA

@@ -172,6 +172,11 @@ void CGameObject::Initialize()
 	SetActive(true);
 }
 
+void CGameObject::Reset(const XMFLOAT4X4& TransformMatrix)
+{
+	SetActive(true);
+}
+
 void CGameObject::Animate(float ElapsedTime)
 {
 

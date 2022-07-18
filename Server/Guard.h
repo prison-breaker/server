@@ -7,6 +7,8 @@ class CEventTrigger;
 class CGuard : public CGameObject
 {
 private:
+	UINT							  m_ID{};
+
 	UINT							  m_Health{ 100 };
 
 	float							  m_Speed{};
@@ -32,8 +34,12 @@ public:
 	virtual ~CGuard() = default;
 
 	virtual void Initialize();
+	virtual void Reset(const XMFLOAT4X4& TransformMatrix);
 
 	virtual void Animate(float ElapsedTime);
+
+	void SetID(UINT ID);
+	UINT GetID() const;
 
 	void SetHealth(UINT Health);
 	UINT GetHealth() const;

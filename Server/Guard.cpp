@@ -11,6 +11,20 @@ void CGuard::Initialize()
 	m_StateMachine->SetCurrentState(CGuardPatrolState::GetInstance());
 }
 
+void CGuard::Reset(const XMFLOAT4X4& TransformMatrix)
+{
+	m_IsActive = true;
+	m_Health = 100;
+	m_NavPath.clear();
+	m_PatrolIndex = 0;
+	m_EventTrigger = nullptr;
+
+	SetTransformMatrix(TransformMatrix);
+	UpdateTransform(Matrix4x4::Identity());
+
+	m_StateMachine->SetCurrentState(CGuardPatrolState::GetInstance());
+}
+
 void CGuard::Animate(float ElapsedTime)
 {
 	if (IsActive())
@@ -20,6 +34,16 @@ void CGuard::Animate(float ElapsedTime)
 			m_StateMachine->Update(ElapsedTime);
 		}
 	}
+}
+
+void CGuard::SetID(UINT ID)
+{
+	m_ID = ID;
+}
+
+UINT CGuard::GetID() const
+{
+	return m_ID;
 }
 
 void CGuard::SetHealth(UINT Health)

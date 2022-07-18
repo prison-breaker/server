@@ -7,6 +7,19 @@ COpenDoorEventTrigger::COpenDoorEventTrigger()
 	m_ActiveFOV = 70.0f;
 }
 
+void COpenDoorEventTrigger::Reset()
+{
+	CEventTrigger::Reset();
+
+	SetActive(true);
+
+	const XMFLOAT3 WorldUp{ 0.0f, 1.0f, 0.0f };
+
+	m_EventObjects[0]->Rotate(WorldUp , -m_DoorAngle);
+	m_EventObjects[1]->Rotate(WorldUp, m_DoorAngle);
+	m_DoorAngle = 0.0f;
+}
+
 bool COpenDoorEventTrigger::CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition)
 {
 	// 문이 모두 열리지 않은 상태에서는 문 너머로 갈 수 없다.
@@ -44,6 +57,21 @@ CPowerDownEventTrigger::CPowerDownEventTrigger()
 {
 	m_IsActive = true;
 	m_ActiveFOV = 40.0f;
+}
+
+void CPowerDownEventTrigger::Reset()
+{
+	CEventTrigger::Reset();
+
+	SetActive(true);
+
+	const XMFLOAT3 WorldUp{ 0.0f, 1.0f, 0.0f };
+
+	CServer::m_Lights[0].m_IsActive = true;
+
+	m_IsOpened = false;
+	m_EventObjects[0]->Rotate(WorldUp, m_PanelAngle);
+	m_PanelAngle = 0.0f;
 }
 
 void CPowerDownEventTrigger::InteractEventTrigger(UINT CallerIndex)
@@ -98,6 +126,13 @@ CSirenEventTrigger::CSirenEventTrigger()
 	m_ActiveFOV = 40.0f;
 }
 
+void CSirenEventTrigger::Reset()
+{
+	CEventTrigger::Reset();
+
+	SetActive(true);
+}
+
 void CSirenEventTrigger::InteractEventTrigger(UINT CallerIndex)
 {
 	if (!IsInteracted())
@@ -143,6 +178,19 @@ COpenGateEventTrigger::COpenGateEventTrigger()
 	m_ActiveFOV = 70.0f;
 }
 
+void COpenGateEventTrigger::Reset()
+{
+	CEventTrigger::Reset();
+
+	SetActive(true);
+
+	const XMFLOAT3 WorldUp{ 0.0f, 1.0f, 0.0f };
+
+	m_EventObjects[0]->Rotate(WorldUp, m_GateAngle);
+	m_EventObjects[1]->Rotate(WorldUp, -m_GateAngle);
+	m_GateAngle = 0.0f;
+}
+
 bool COpenGateEventTrigger::CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition)
 {
 	// 게이트가 모두 열리지 않은 상태에서는 게이트 너머로 갈 수 없다.
@@ -163,12 +211,12 @@ void COpenGateEventTrigger::InteractEventTrigger(UINT CallerIndex)
 {
 	if (!IsInteracted())
 	{
-		vector<shared_ptr<CEventTrigger>>& EventTriggers{ CServer::m_EventTriggers };
+		//vector<shared_ptr<CEventTrigger>>& EventTriggers{ CServer::m_EventTriggers };
 
-		if (EventTriggers[0]->IsInteracted() && EventTriggers[1]->IsInteracted())
-		{
-			CEventTrigger::InteractEventTrigger(CallerIndex);
-		}
+		//if (EventTriggers[0]->IsInteracted() && EventTriggers[1]->IsInteracted())
+		//{
+		//	CEventTrigger::InteractEventTrigger(CallerIndex);
+		//}
 	}
 }
 
@@ -194,6 +242,13 @@ CGetPistolEventTrigger::CGetPistolEventTrigger()
 	m_ActiveFOV = 360.0f;
 }
 
+void CGetPistolEventTrigger::Reset()
+{
+	CEventTrigger::Reset();
+
+	SetActive(false);
+}
+
 void CGetPistolEventTrigger::InteractEventTrigger(UINT CallerIndex)
 {
 	if (!IsInteracted())
@@ -207,7 +262,7 @@ void CGetPistolEventTrigger::InteractEventTrigger(UINT CallerIndex)
 
 		if (!Player->HasPistol())
 		{
-			Player->AcquirePistol();
+			Player->ManagePistol(true);
 		}
 
 		Player->SwapWeapon(WEAPON_TYPE_PISTOL);
@@ -219,6 +274,13 @@ void CGetPistolEventTrigger::InteractEventTrigger(UINT CallerIndex)
 CGetKeyEventTrigger::CGetKeyEventTrigger()
 {
 	m_ActiveFOV = 360.0f;
+}
+
+void CGetKeyEventTrigger::Reset()
+{
+	CEventTrigger::Reset();
+
+	SetActive(false);
 }
 
 void CGetKeyEventTrigger::InteractEventTrigger(UINT CallerIndex)

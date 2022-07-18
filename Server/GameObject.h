@@ -42,6 +42,7 @@ public:
 	static void LoadAnimationInfoFromFile(tifstream& InFile, const shared_ptr<LOADED_MODEL_INFO>& ModelInfo);
 
 	virtual void Initialize();
+	virtual void Reset(const XMFLOAT4X4& TransformMatrix);
 
 	virtual void Animate(float ElapsedTime);
 

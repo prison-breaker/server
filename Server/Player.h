@@ -25,6 +25,7 @@ public:
 	virtual ~CPlayer() = default;
 
 	virtual void Initialize();
+	virtual void Reset(const XMFLOAT4X4& TransformMatrix);
 
 	virtual void Animate(float ElapsedTime);
 
@@ -45,7 +46,7 @@ public:
 
 	shared_ptr<CStateMachine<CPlayer>> GetStateMachine() const;
 
-	void AcquirePistol();
+	void ManagePistol(bool AcquirePistol);
 	bool HasPistol() const;
 	bool IsEquippedPistol() const;
 

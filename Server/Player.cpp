@@ -14,6 +14,18 @@ void CPlayer::Initialize()
 	FindFrame(TEXT("gun_pr_1"))->SetActive(false);
 }
 
+void CPlayer::Reset(const XMFLOAT4X4& TransformMatrix)
+{
+	SwapWeapon(WEAPON_TYPE_PUNCH);
+	ManagePistol(false);
+
+	m_Health = 100;
+	m_StateMachine->SetCurrentState(CPlayerIdleState::GetInstance());
+
+	SetTransformMatrix(TransformMatrix);
+	UpdateTransform(Matrix4x4::Identity());
+}
+
 void CPlayer::Animate(float ElapsedTime)
 {
 	if (IsActive())
@@ -88,9 +100,16 @@ shared_ptr<CStateMachine<CPlayer>> CPlayer::GetStateMachine() const
 	return m_StateMachine;
 }
 
-void CPlayer::AcquirePistol()
+void CPlayer::ManagePistol(bool AcquirePistol)
 {
-	m_PistolFrame = FindFrame(TEXT("gun_pr_1"));
+	if (AcquirePistol)
+	{
+		m_PistolFrame = FindFrame(TEXT("gun_pr_1"));
+	}
+	else
+	{
+		m_PistolFrame = nullptr;
+	}
 }
 
 bool CPlayer::HasPistol() const

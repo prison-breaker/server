@@ -345,6 +345,7 @@ void CGuardShootingState::Enter(const shared_ptr<CGuard>& Entity)
 	Entity->SetElapsedTime(0.0f);
 	Entity->SetRecentTransition(false);
 	Entity->GetAnimationController()->SetAnimationClipType(ANIMATION_CLIP_TYPE_NPC_SHOOT);
+	Entity->GetAnimationController()->SetKeyFrameIndex(0);
 	Entity->SetSpeed(0.0f);
 
 	if (!CServer::m_InvincibleMode)
@@ -357,6 +358,9 @@ void CGuardShootingState::Enter(const shared_ptr<CGuard>& Entity)
 		{
 			Player->GetStateMachine()->ChangeState(CPlayerDyingState::GetInstance());
 		}
+
+		CServer::m_MsgType |= MSG_TYPE_GUARD_ATTACK;
+		CServer::m_GuardAttackData.m_TargetIndices[Entity->GetID()] = Player->GetID();
 	}
 }
 
@@ -404,7 +408,6 @@ void CGuardShootingState::Update(const shared_ptr<CGuard>& Entity, float Elapsed
 				{
 					// RayCasting 이후 또 맞았다면 방향을 다시 설정한 후 슈팅 애니메이션을 하도록 컨트롤러의 인덱스를 0으로 만든다.
 					Entity->UpdateLocalCoord(Direction);
-					Entity->GetAnimationController()->SetKeyFrameIndex(0);
 					Entity->GetStateMachine()->GetCurrentState()->Enter(Entity);
 					return;
 				}
