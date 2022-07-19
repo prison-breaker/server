@@ -434,6 +434,32 @@ void CGuard::FindPatrolNavPath(const shared_ptr<CNavMesh>& NavMesh, const XMFLOA
 	reverse(m_PatrolNavPath.begin(), m_PatrolNavPath.end());
 }
 
+shared_ptr<CGameObject> CGuard::IsCollidedByGuard(const XMFLOAT3& NewPosition)
+{
+	vector<vector<shared_ptr<CGameObject>>>& GameObjects{ CServer::m_GameObjects };
+
+	for (const auto& GameObject : GameObjects[OBJECT_TYPE_NPC])
+	{
+		if (GameObject)
+		{
+			shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(GameObject) };
+
+			if (Guard->GetHealth() > 0)
+			{
+				if (shared_from_this() != GameObject)
+				{
+					if (Math::Distance(Guard->GetPosition(), NewPosition) <= 2.0f)
+					{
+						return Guard;
+					}
+				}
+			}
+		}
+	}
+
+	return nullptr;
+}
+
 void CGuard::MoveToNavPath(float ElapsedTime)
 {
 	if (!m_NavPath.empty())
@@ -451,7 +477,38 @@ void CGuard::MoveToNavPath(float ElapsedTime)
 		}
 		else
 		{
-			CGameObject::Move(m_MovingDirection, m_Speed * ElapsedTime);
+			XMFLOAT3 NewPosition{ Vector3::Add(GetPosition(), Vector3::ScalarProduct(m_Speed * ElapsedTime, m_MovingDirection, false)) };
+			shared_ptr<CGameObject> CollidedGuard{ IsCollidedByGuard(NewPosition) };
+
+			if (CollidedGuard)
+			{
+				XMFLOAT3 ToGuard{ Vector3::Subtract(CollidedGuard->GetPosition(), GetPosition()) };
+				float ScalarProduct{ Vector3::CrossProduct(GetLook(), ToGuard, false).y };
+
+				if (ScalarProduct > 0.0f)
+				{
+					NewPosition = Vector3::Add(GetPosition(), Vector3::ScalarProduct(m_Speed * ElapsedTime, Vector3::Inverse(GetRight()), false));
+				}
+				else
+				{
+					NewPosition = Vector3::Add(GetPosition(), Vector3::ScalarProduct(m_Speed * ElapsedTime, GetRight(), false));
+				}
+
+				shared_ptr<CNavMesh> NavMesh{ CServer::m_NavMesh };
+
+				if (!IsInNavMesh(NavMesh, NewPosition))
+				{
+					NewPosition = GetPosition();
+				}
+				else
+				{
+					m_MovingDirection = Vector3::Normalize(Vector3::Subtract(m_NavPath.back(), NewPosition));
+
+					UpdateLocalCoord(m_MovingDirection);
+				}
+			}
+
+			SetPosition(NewPosition);
 		}
 	}
 }
