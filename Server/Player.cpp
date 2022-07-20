@@ -18,6 +18,7 @@ void CPlayer::Reset(const XMFLOAT4X4& TransformMatrix)
 {
 	SwapWeapon(WEAPON_TYPE_PUNCH);
 	ManagePistol(false);
+	ManageKey(false);
 
 	m_Health = 100;
 	m_StateMachine->SetCurrentState(CPlayerIdleState::GetInstance());
@@ -100,9 +101,9 @@ shared_ptr<CStateMachine<CPlayer>> CPlayer::GetStateMachine() const
 	return m_StateMachine;
 }
 
-void CPlayer::ManagePistol(bool AcquirePistol)
+void CPlayer::ManagePistol(bool HasPistol)
 {
-	if (AcquirePistol)
+	if (HasPistol)
 	{
 		m_PistolFrame = FindFrame(TEXT("gun_pr_1"));
 	}
@@ -125,6 +126,16 @@ bool CPlayer::IsEquippedPistol() const
 	}
 
 	return false;
+}
+
+void CPlayer::ManageKey(bool HasKey)
+{
+	m_HasKey = HasKey;
+}
+
+bool CPlayer::HasKey() const
+{
+	return m_HasKey;
 }
 
 bool CPlayer::SwapWeapon(WEAPON_TYPE WeaponType)
@@ -251,22 +262,24 @@ bool CPlayer::IsCollidedByEventTrigger(const XMFLOAT3& NewPosition, bool IsInter
 	{
 		if (EventTriggers[i])
 		{
+			// 0 ~ 1: Key EventTriggers
+			// 열쇠를 가지고 있는 경우, 해당 트리거는 건너뛴다.
+			if (i <= 1)
+			{
+				if (m_HasKey)
+				{
+					continue;
+				}
+			}
+
 			if (EventTriggers[i]->IsInTriggerArea(GetPosition(), GetLook()))
 			{
 				if (IsInteracted)
 				{
-					EventTriggers[i]->InteractEventTrigger(GetID());
-
-					CServer::m_MsgType |= MSG_TYPE_TRIGGER;
-
-					UINT Index{ CServer::m_TriggerData.m_Size++ };
-
-					CServer::m_TriggerData.m_TriggerIndexStack[Index] = i;
-
-					// 만약 트리거가 열쇠나 권총 획득 트리거라면, 습득한 플레이어의 인덱스 값을 기록한다.
-					if (i <= 6)
+					if (EventTriggers[i]->InteractEventTrigger(GetID()))
 					{
-						CServer::m_TriggerData.m_CallerIndexStack[Index] = GetID();
+						CServer::m_MsgType |= MSG_TYPE_TRIGGER;
+						CServer::m_TriggerData.m_TargetIndices[GetID()] = i;
 					}
 				}
 
@@ -279,7 +292,7 @@ bool CPlayer::IsCollidedByEventTrigger(const XMFLOAT3& NewPosition, bool IsInter
 			}
 		}
 	}
-
+	
 	return false;
 }
 

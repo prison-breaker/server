@@ -774,14 +774,13 @@ void CServer::UpdatePlayerInfo()
     for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
     {
         m_PlayerAttackData.m_TargetIndices[i] = UINT_MAX;
+        m_TriggerData.m_TargetIndices[i] = UINT_MAX;
     }
 
     for (UINT i = 0; i < MAX_NPC_COUNT; ++i)
     {
         m_GuardAttackData.m_TargetIndices[i] = UINT_MAX;
     }
-
-    memset(&m_TriggerData, NULL, sizeof(m_TriggerData));
 
     for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
     {

@@ -32,10 +32,8 @@ public:
 
 	virtual void Reset();
 
-	virtual void InteractEventTrigger(UINT CallerIndex);
+	virtual bool InteractEventTrigger(UINT CallerIndex);
 	virtual void Update(float ElapsedTime);
-
-	bool IsOpened() const;
 };
 
 //=========================================================================================================================
@@ -46,9 +44,7 @@ public:
 	CSirenEventTrigger();
 	virtual ~CSirenEventTrigger() = default;
 
-	virtual void Reset();
-
-	virtual void InteractEventTrigger(UINT CallerIndex);
+	virtual bool InteractEventTrigger(UINT CallerIndex);
 };
 
 //=========================================================================================================================
@@ -56,6 +52,8 @@ public:
 class COpenGateEventTrigger : public CEventTrigger
 {
 private:
+	bool  m_UsedKeyIndices[MAX_PLAYER_CAPACITY]{};
+
 	float m_GateAngle{};
 
 public:
@@ -66,7 +64,7 @@ public:
 
 	virtual bool CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition);
 
-	virtual void InteractEventTrigger(UINT CallerIndex);
+	virtual bool InteractEventTrigger(UINT CallerIndex);
 	virtual void Update(float ElapsedTime);
 };
 
@@ -80,7 +78,7 @@ public:
 
 	virtual void Reset();
 
-	virtual void InteractEventTrigger(UINT CallerIndex);
+	virtual bool InteractEventTrigger(UINT CallerIndex);
 };
 
 //=========================================================================================================================
@@ -93,5 +91,5 @@ public:
 
 	virtual void Reset();
 
-	virtual void InteractEventTrigger(UINT CallerIndex);
+	virtual bool InteractEventTrigger(UINT CallerIndex);
 };

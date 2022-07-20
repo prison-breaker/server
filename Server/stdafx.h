@@ -194,10 +194,7 @@ struct GUARD_ATTACK_DATA
 
 struct TRIGGER_DATA
 {
-	UINT m_Size{};
-
-	UINT m_TriggerIndexStack[2]{};
-	UINT m_CallerIndexStack[2]{};
+	UINT m_TargetIndices[MAX_PLAYER_CAPACITY]{};
 };
 
 struct SERVER_TO_CLIENT_DATA

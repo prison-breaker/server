@@ -3,7 +3,8 @@
 
 void CEventTrigger::Reset()
 {
-	SetInteracted(false);
+	m_IsActive = true;
+	m_IsInteracted = false;
 }
 
 bool CEventTrigger::CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition)
@@ -11,12 +12,16 @@ bool CEventTrigger::CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3&
 	return true;
 }
 
-void CEventTrigger::InteractEventTrigger(UINT CallerIndex)
+bool CEventTrigger::InteractEventTrigger(UINT CallerIndex)
 {
-	if (!IsInteracted())
+	if (!m_IsInteracted)
 	{
-		SetInteracted(true);
+		m_IsInteracted = true;
+
+		return true;
 	}
+
+	return false;
 }
 
 void CEventTrigger::Update(float ElapsedTime)
@@ -123,18 +128,15 @@ shared_ptr<CGameObject> CEventTrigger::GetEventObject(UINT Index)
 
 bool CEventTrigger::IsInTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& LookDirection)
 {
-	if (IsActive())
+	if (m_IsActive && !m_IsInteracted)
 	{
 		for (UINT i = 0; i < 2; ++i)
 		{
 			if (Math::IsInTriangle(m_TriggerArea[0], m_TriggerArea[i + 1], m_TriggerArea[i + 2], Position))
 			{
-				if (!IsInteracted())
+				if (Vector3::Angle(LookDirection, m_ToTrigger) <= m_ActiveFOV)
 				{
-					if (Vector3::Angle(LookDirection, m_ToTrigger) <= m_ActiveFOV)
-					{
-						return true;
-					}
+					return true;
 				}
 			}
 		}
