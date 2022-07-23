@@ -88,13 +88,7 @@ float CTimer::GetElapsedTime() const
 	return m_ElapsedTime;
 }
 
-UINT CTimer::GetFrameRate(LPTSTR Title, UINT Characters) const
+UINT CTimer::GetFrameRate() const
 {
-	if (Title)
-	{
-		_itot_s(m_FrameRate, Title, Characters, 10);
-		_tcscat_s(Title, Characters, _T(" FPS)"));
-	}
-
 	return m_FrameRate;
 }

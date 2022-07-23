@@ -567,6 +567,8 @@ bool CServer::RegisterPlayer(SOCKET Socket, const SOCKADDR_IN& SocketAddress)
     m_ClientSocketInfos[ValidID].m_Socket = Socket;
     m_ClientSocketInfos[ValidID].m_SocketAddress = SocketAddress;
 
+    SetEvent(m_ClientSyncEvents[ValidID]);
+
     return true;
 }
 
@@ -609,7 +611,7 @@ bool CServer::CheckAllPlayerReady()
 
 bool CServer::CheckGameOver()
 {
-    if (!m_IsGameOver || !m_IsGameClear)
+    if (!m_IsGameOver && !m_IsGameClear)
     {
         for (const auto& GameObject : m_GameObjects[OBJECT_TYPE_PLAYER])
         {
@@ -630,7 +632,7 @@ bool CServer::CheckGameOver()
     {
         m_ElapsedTimeFromGameOver += m_Timer->GetElapsedTime();
 
-        if (m_ElapsedTimeFromGameOver >= 7.0f)
+        if (m_ElapsedTimeFromGameOver >= 5.0f)
         {
             m_ElapsedTimeFromGameOver = 0.0f;
             m_SceneType = SCENE_TYPE_TITLE;
