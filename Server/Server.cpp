@@ -734,7 +734,9 @@ void CServer::ResetGameData()
     }
 
     m_InvincibleMode = false;
+
     m_Lights[0].m_SpotLightAngle = XMConvertToRadians(90.0f);
+    m_Lights[0].m_Direction = Vector3::Normalize(XMFLOAT3(cosf(m_Lights[0].m_SpotLightAngle), -1.0f, sinf(m_Lights[0].m_SpotLightAngle)));
 
     memset(&m_SendedPacketData, 0, sizeof(m_SendedPacketData));
     memset(&m_TriggerData, 0, sizeof(m_TriggerData));
@@ -746,10 +748,13 @@ void CServer::ResetGameData()
 
     for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
     {
+        m_ReceivedPacketData[i].m_InputMask = INPUT_MASK_NONE;
         m_ReceivedPacketData[i].m_WorldMatrix = m_GameObjects[OBJECT_TYPE_PLAYER][i]->GetWorldMatrix();
     }
 
     memset(m_ReceivedMsgTypes, 0, sizeof(m_ReceivedMsgTypes));
+
+    tcout << "========== 게임 데이터 리셋 됨 ============" << endl;
 }
 
 void CServer::ProcessInput()

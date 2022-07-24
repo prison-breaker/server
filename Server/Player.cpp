@@ -16,15 +16,16 @@ void CPlayer::Initialize()
 
 void CPlayer::Reset(const XMFLOAT4X4& TransformMatrix)
 {
+	m_Health = 100;
+
 	SwapWeapon(WEAPON_TYPE_PUNCH);
 	ManagePistol(false);
 	ManageKey(false);
 
-	m_Health = 100;
-	m_StateMachine->SetCurrentState(CPlayerIdleState::GetInstance());
-
 	SetTransformMatrix(TransformMatrix);
 	UpdateTransform(Matrix4x4::Identity());
+
+	m_StateMachine->SetCurrentState(CPlayerIdleState::GetInstance());
 }
 
 void CPlayer::Animate(float ElapsedTime)
