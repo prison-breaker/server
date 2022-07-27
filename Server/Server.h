@@ -7,6 +7,7 @@
 class CServer
 {
 public:
+	static bool									   m_IsGameClear;
 	static bool									   m_InvincibleMode;
 
 	static MSG_TYPE								   m_MsgType;
@@ -28,7 +29,6 @@ private:
 	SCENE_TYPE									   m_SceneType{};
 
 	bool										   m_IsGameOver{};
-	bool										   m_IsGameClear{};
 	float										   m_ElapsedTimeFromGameOver{};
 
 	SOCKET                                         m_ListenSocket{};                           // 클라이언트를 수용하기 위한 대기 소켓
@@ -74,7 +74,7 @@ public:
 	bool CheckConnection();
 	bool CheckAllPlayerReady();
 
-	bool CheckGameOver();
+	void CheckGameOver();
 
 	void ResetGameData();
 

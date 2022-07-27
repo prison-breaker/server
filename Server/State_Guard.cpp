@@ -177,7 +177,7 @@ void CGuardChaseState::Update(const shared_ptr<CGuard>& Entity, float ElapsedTim
 					XMFLOAT3 RayOrigin{ Entity->GetPosition() };
 					RayOrigin.y = 5.0f;
 
-					shared_ptr<CGameObject> IntersectedObject{ GameObject->PickObjectByRayIntersection(RayOrigin, Direction, HitDistance, 10.0f) };
+					shared_ptr<CGameObject> IntersectedObject{ GameObject->PickObjectByRayIntersection(RayOrigin, Direction, HitDistance, 10.0f, false) };
 
 					if (IntersectedObject && HitDistance < 10.0f)
 					{
@@ -394,7 +394,7 @@ void CGuardShootingState::Update(const shared_ptr<CGuard>& Entity, float Elapsed
 						XMFLOAT3 RayOrigin{ Entity->GetPosition() };
 						RayOrigin.y = 5.0f;
 
-						shared_ptr<CGameObject> IntersectedObject{ GameObject->PickObjectByRayIntersection(RayOrigin, Direction, HitDistance, 10.0f) };
+						shared_ptr<CGameObject> IntersectedObject{ GameObject->PickObjectByRayIntersection(RayOrigin, Direction, HitDistance, 10.0f, false) };
 
 						if (IntersectedObject && HitDistance < 10.0f)
 						{
@@ -445,16 +445,11 @@ CGuardHitState* CGuardHitState::GetInstance()
 
 void CGuardHitState::Enter(const shared_ptr<CGuard>& Entity)
 {
-	if (Entity->GetTarget())
+	if (Entity->GetHealth() <= 0)
 	{
-		XMFLOAT3 Direction{ Vector3::Normalize(Vector3::Subtract(Entity->GetTarget()->GetPosition(), Entity->GetPosition())) };
+		Entity->GetStateMachine()->ChangeState(CGuardDyingState::GetInstance());
 
-		Entity->UpdateLocalCoord(Direction);
-		Entity->SetHealth(Entity->GetHealth() - 40);
-	}
-	else
-	{
-		Entity->SetHealth(0);
+		return;
 	}
 
 	Entity->SetElapsedTime(0.0f);

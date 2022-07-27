@@ -238,6 +238,10 @@ void COpenGateEventTrigger::Update(float ElapsedTime)
 			m_EventObjects[1]->Rotate(WorldUp, 55.0f * ElapsedTime);
 			m_GateAngle += 55.0f * ElapsedTime;
 		}
+		else
+		{
+			CServer::m_IsGameClear = true;
+		}
 	}
 }
 

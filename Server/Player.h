@@ -18,7 +18,7 @@ private:
 		
 	bool							   m_HasKey{};
 
-	XMFLOAT3						   m_CameraPosition{};
+	CAMERA_DATA						   m_CameraData{};
 
 	shared_ptr<CStateMachine<CPlayer>> m_StateMachine{};
 
@@ -43,8 +43,8 @@ public:
 	void SetMovingDirection(const XMFLOAT3& MovingDirection);
 	const XMFLOAT3& GetMovingDirection() const;
 
-	void SetCameraPosition(const XMFLOAT3& CameraPosition);
-	const XMFLOAT3& GetCameraPosition() const;
+	void SetCameraData(const CAMERA_DATA& CameraData);
+	const CAMERA_DATA& GetCameraData() const;
 
 	shared_ptr<CStateMachine<CPlayer>> GetStateMachine() const;
 

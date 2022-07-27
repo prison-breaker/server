@@ -193,9 +193,10 @@ shared_ptr<CGameObject> CGuard::IsFoundPlayer(const vector<vector<shared_ptr<CGa
 							if (GameObject)
 							{
 								XMFLOAT3 RayOrigin{ GetPosition() };
+
 								RayOrigin.y = 5.0f;
 
-								shared_ptr<CGameObject> IntersectedObject{ GameObject->PickObjectByRayIntersection(RayOrigin, Vector3::Normalize(ToPlayer), HitDistance, 30.0f)};
+								shared_ptr<CGameObject> IntersectedObject{ GameObject->PickObjectByRayIntersection(RayOrigin, Vector3::Normalize(ToPlayer), HitDistance, 30.0f, false)};
 
 								if (IntersectedObject && HitDistance < 30.0f)
 								{
@@ -316,7 +317,7 @@ void CGuard::FindRayCastingNavPath(const vector<vector<shared_ptr<CGameObject>>>
 			XMFLOAT3 CheckPosition{ m_NavPath[CheckIndex] };
 
 			// 바운딩 박스와 충돌이 일어나기 위한 최소 높이이다.
-			SearchPosition.y = CheckPosition.y = 5.0f;
+			SearchPosition.y = CheckPosition.y = 2.6f;
 
 			// Normalize 안하니까 터지지? 반대 방향은 왜 안되는지?
 			XMFLOAT3 ToNextPosition{ Vector3::Subtract(SearchPosition, CheckPosition) }; 
@@ -328,7 +329,7 @@ void CGuard::FindRayCastingNavPath(const vector<vector<shared_ptr<CGameObject>>>
 			{
 				if (GameObject)
 				{
-					shared_ptr<CGameObject> IntersectedObject{ GameObject->PickObjectByRayIntersection(CheckPosition, Vector3::Normalize(ToNextPosition), HitDistance, Distance) };
+					shared_ptr<CGameObject> IntersectedObject{ GameObject->PickObjectByRayIntersection(CheckPosition, Vector3::Normalize(ToNextPosition), HitDistance, Distance, true) };
 
 					if (IntersectedObject && (HitDistance < Distance))
 					{
@@ -434,6 +435,29 @@ void CGuard::FindPatrolNavPath(const shared_ptr<CNavMesh>& NavMesh, const XMFLOA
 	reverse(m_PatrolNavPath.begin(), m_PatrolNavPath.end());
 }
 
+bool CGuard::IsCollidedByPlayer(const XMFLOAT3& NewPosition)
+{
+	vector<vector<shared_ptr<CGameObject>>>& GameObjects{ CServer::m_GameObjects };
+
+	for (const auto& GameObject : GameObjects[OBJECT_TYPE_PLAYER])
+	{
+		if (GameObject)
+		{
+			shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(GameObject) };
+
+			if (Player->GetHealth() > 0)
+			{
+				if (Math::Distance(Player->GetPosition(), NewPosition) <= 2.0f)
+				{
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
 shared_ptr<CGameObject> CGuard::IsCollidedByGuard(const XMFLOAT3& NewPosition)
 {
 	vector<vector<shared_ptr<CGameObject>>>& GameObjects{ CServer::m_GameObjects };
@@ -478,6 +502,12 @@ void CGuard::MoveToNavPath(float ElapsedTime)
 		else
 		{
 			XMFLOAT3 NewPosition{ Vector3::Add(GetPosition(), Vector3::ScalarProduct(m_Speed * ElapsedTime, m_MovingDirection, false)) };
+
+			if (IsCollidedByPlayer(NewPosition))
+			{
+				return;
+			}
+
 			shared_ptr<CGameObject> CollidedGuard{ IsCollidedByGuard(NewPosition) };
 
 			if (CollidedGuard)

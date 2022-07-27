@@ -285,23 +285,31 @@ void CPlayerPunchingState::Enter(const shared_ptr<CPlayer>& Entity)
 
 			if (Guard->GetHealth() > 0)
 			{
-				XMFLOAT3 ToGuard{ Vector3::Subtract(Guard->GetPosition(), Entity->GetPosition()) };
-
-				if ((Vector3::Length(ToGuard) < 3.0f) && (Vector3::Angle(Entity->GetLook(), Vector3::Normalize(ToGuard)) < 80.0f))
+				if (!Guard->GetStateMachine()->IsInState(CGuardHitState::GetInstance()))
 				{
-					// 타겟이 설정된 경우가 아닌 경우에 맞았다면, 뒤에서 습격당한 경우이므로, 타겟을 설정하지 않는다.
-					// 즉, 타겟이 있었던 경우에만, 타겟을 때린 사람으로 변경한다.
-					if (Guard->GetTarget())
+					XMFLOAT3 ToGuard{ Vector3::Subtract(Guard->GetPosition(), Entity->GetPosition()) };
+
+					if ((Vector3::Length(ToGuard) < 3.0f) && (Vector3::Angle(Entity->GetLook(), Vector3::Normalize(ToGuard)) < 80.0f))
 					{
-						Guard->SetTarget(Entity);
+						//교도관의 룩벡터와 플레이어의 룩벡터의 방향이 비슷하다면 뒷통수 펀치 판정
+						if (Vector3::Angle(Guard->GetLook(), Entity->GetLook()) < 40.0f)
+						{
+							Guard->SetHealth(0);
+							Guard->SetTarget(nullptr);
+						}
+						else
+						{
+							Guard->SetHealth(Guard->GetHealth() - 34);
+							Guard->SetTarget(Entity);
+						}
+
+						Guard->GetStateMachine()->ChangeState(CGuardHitState::GetInstance());
+
+						CServer::m_MsgType |= MSG_TYPE_PLAYER_ATTACK;
+						CServer::m_PlayerAttackData.m_TargetIndices[Entity->GetID()] = Guard->GetID();
+
+						break;
 					}
-
-					Guard->GetStateMachine()->ChangeState(CGuardHitState::GetInstance());
-
-					CServer::m_MsgType |= MSG_TYPE_PLAYER_ATTACK;
-					CServer::m_PlayerAttackData.m_TargetIndices[Entity->GetID()] = Guard->GetID();
-
-					break;
 				}
 			}
 		}
@@ -357,8 +365,8 @@ void CPlayerShootingState::ProcessInput(const shared_ptr<CPlayer>& Entity, float
 
 			float NearestHitDistance{ FLT_MAX };
 			float HitDistance{};
-			XMFLOAT3 RayOrigin{ Entity->GetCameraPosition() };
-			XMFLOAT3 RayDirection{ Entity->GetLook()};
+			XMFLOAT3 RayOrigin{ Entity->GetCameraData().m_CameraPosition };
+			XMFLOAT3 RayDirection{ Entity->GetCameraData().m_CameraDirection };
 
 			for (UINT i = OBJECT_TYPE_NPC; i <= OBJECT_TYPE_STRUCTURE; ++i)
 			{
@@ -386,7 +394,7 @@ void CPlayerShootingState::ProcessInput(const shared_ptr<CPlayer>& Entity, float
 								AnimationController->UpdateShaderVariables();
 							}
 
-							shared_ptr<CGameObject> IntersectedObject{ GameObject->PickObjectByRayIntersection(RayOrigin, RayDirection, HitDistance, FLT_MAX) };
+							shared_ptr<CGameObject> IntersectedObject{ GameObject->PickObjectByRayIntersection(RayOrigin, RayDirection, HitDistance, FLT_MAX, false) };
 
 							//if (IntersectedObject)
 							//{
@@ -412,17 +420,32 @@ void CPlayerShootingState::ProcessInput(const shared_ptr<CPlayer>& Entity, float
 				{
 					shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(NearestIntersectedRootObject) };
 
-					if (!Guard->GetStateMachine()->IsInState(CGuardHitState::GetInstance()) && !Guard->GetStateMachine()->IsInState(CGuardDyingState::GetInstance()))
+					if (Guard->GetHealth() > 0)
 					{
-						Guard->SetTarget(Entity);
-						Guard->GetStateMachine()->ChangeState(CGuardHitState::GetInstance());
+						if (!Guard->GetStateMachine()->IsInState(CGuardHitState::GetInstance()))
+						{
+							tstring HitFrameName{ NearestIntersectedObject->GetName() };
 
-						CServer::m_MsgType |= MSG_TYPE_PLAYER_ATTACK;
-						CServer::m_PlayerAttackData.m_TargetIndices[Entity->GetID()] = Guard->GetID();
+							if (HitFrameName == "hat" || HitFrameName == "head_1" || HitFrameName == "head_2")
+							{
+								Guard->SetHealth(0);
+								Guard->SetTarget(nullptr);
+							}
+							else
+							{
+								Guard->SetHealth(Guard->GetHealth() - 50);
+								Guard->SetTarget(Entity);
+							}
+
+							Guard->GetStateMachine()->ChangeState(CGuardHitState::GetInstance());
+
+							CServer::m_MsgType |= MSG_TYPE_PLAYER_ATTACK;
+							CServer::m_PlayerAttackData.m_TargetIndices[Entity->GetID()] = Guard->GetID();
+						}
 					}
 				}
 
-				tcout << TEXT("★ 가장 먼저 광선을 맞은 객체명 : ") << NearestIntersectedObject->GetName() << TEXT(" (거리 : ") << NearestHitDistance << TEXT(")") << endl << endl;
+				//tcout << TEXT("★ 가장 먼저 광선을 맞은 객체명 : ") << NearestIntersectedObject->GetName() << TEXT(" (거리 : ") << NearestHitDistance << TEXT(")") << endl << endl;
 			}
 
 			Entity->GetAnimationController()->SetAnimationClipType(ANIMATION_CLIP_TYPE_PLAYER_SHOOT);

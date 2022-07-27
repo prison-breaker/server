@@ -16,15 +16,16 @@ void CPlayer::Initialize()
 
 void CPlayer::Reset(const XMFLOAT4X4& TransformMatrix)
 {
+	m_Health = 100;
+
 	SwapWeapon(WEAPON_TYPE_PUNCH);
 	ManagePistol(false);
 	ManageKey(false);
 
-	m_Health = 100;
-	m_StateMachine->SetCurrentState(CPlayerIdleState::GetInstance());
-
 	SetTransformMatrix(TransformMatrix);
 	UpdateTransform(Matrix4x4::Identity());
+
+	m_StateMachine->SetCurrentState(CPlayerIdleState::GetInstance());
 }
 
 void CPlayer::Animate(float ElapsedTime)
@@ -86,14 +87,14 @@ const XMFLOAT3& CPlayer::GetMovingDirection() const
 	return m_MovingDirection;
 }
 
-void CPlayer::SetCameraPosition(const XMFLOAT3& CameraPosition)
+void CPlayer::SetCameraData(const CAMERA_DATA& CameraData)
 {
-	m_CameraPosition = CameraPosition;
+	m_CameraData = CameraData;
 }
 
-const XMFLOAT3& CPlayer::GetCameraPosition() const
+const CAMERA_DATA& CPlayer::GetCameraData() const
 {
-	return m_CameraPosition;
+	return m_CameraData;
 }
 
 shared_ptr<CStateMachine<CPlayer>> CPlayer::GetStateMachine() const

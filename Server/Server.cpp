@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Server.h"
 
+bool									CServer::m_IsGameClear{};
 bool									CServer::m_InvincibleMode{};
 
 MSG_TYPE								CServer::m_MsgType{};
@@ -194,9 +195,9 @@ DWORD WINAPI CServer::ProcessClient(LPVOID Arg)
 
             if ((Server->m_ReceivedPacketData[ClientID].m_InputMask & INPUT_MASK_LMB) && (Server->m_ReceivedPacketData[ClientID].m_InputMask & INPUT_MASK_RMB))
             {
-                XMFLOAT3 CameraPosition{};
+                CAMERA_DATA CameraData{};
 
-                ReturnValue = recv(ClientSocket, (char*)&CameraPosition, sizeof(CameraPosition), MSG_WAITALL);
+                ReturnValue = recv(ClientSocket, (char*)&CameraData, sizeof(CameraData), MSG_WAITALL);
 
                 if (ReturnValue == SOCKET_ERROR)
                 {
@@ -210,7 +211,7 @@ DWORD WINAPI CServer::ProcessClient(LPVOID Arg)
 
                 shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(Server->m_GameObjects[OBJECT_TYPE_PLAYER][ClientID]) };
 
-                Player->SetCameraPosition(CameraPosition);
+                Player->SetCameraData(CameraData);
             }
 
             SetEvent(Server->m_ClientSyncEvents[ClientID]);
@@ -257,6 +258,29 @@ DWORD WINAPI CServer::ProcessClient(LPVOID Arg)
                 }
             }
         }
+        else if (Server->m_ReceivedMsgTypes[ClientID] & MSG_TYPE_ENDING)
+        {
+            SetEvent(Server->m_ClientSyncEvents[ClientID]);
+            WaitForSingleObject(Server->m_MainSyncEvents[1], INFINITE);
+
+            ReturnValue = send(ClientSocket, (char*)&Server->m_SendedPacketData.m_MsgType, sizeof(Server->m_SendedPacketData.m_MsgType), 0);
+
+            if (ReturnValue == SOCKET_ERROR)
+            {
+                Server::ErrorDisplay("send()");
+                break;
+            }
+
+            XMFLOAT4X4 TransformMatrixes[MAX_PLAYER_CAPACITY]{ Server->m_SendedPacketData.m_PlayerWorldMatrices[0], Server->m_SendedPacketData.m_PlayerWorldMatrices[1] };
+
+            ReturnValue = send(ClientSocket, (char*)TransformMatrixes, sizeof(TransformMatrixes), 0);
+
+            if (ReturnValue == SOCKET_ERROR)
+            {
+                Server::ErrorDisplay("send()");
+                break;
+            }
+        }
     }
 
     Server->RemovePlayer(ClientID);
@@ -289,27 +313,29 @@ void CServer::BuildLights()
     m_Lights[0].m_IsActive = true;
     m_Lights[0].m_Position = XMFLOAT3(0.0f, 50.0f, 0.0f);
     m_Lights[0].m_SpotLightAngle = XMConvertToRadians(90.0f);
+    m_Lights[0].m_SpotLightHeightAngle = -1.0f;
+    m_Lights[0].m_Speed = 0.5f;
 }
 
 void CServer::LoadSceneInfoFromFile(const tstring& FileName)
 {
-    tstring Token{};
-
-    shared_ptr<LOADED_MODEL_INFO> ModelInfo{};
-
-    UINT PlayerID{};
-    UINT GuardID{};
-
-    UINT ObjectType{};
+    // 타입 수만큼 각 벡터의 크기를 재할당한다.
+    m_GameObjects.resize(OBJECT_TYPE_STRUCTURE + 1);
 
     unordered_map<tstring, shared_ptr<CMesh>> MeshCaches{};
 
     LoadMeshCachesFromFile(TEXT("MeshesAndMaterials/Meshes.bin"), MeshCaches);
 
-    // 타입 수만큼 각 벡터의 크기를 재할당한다.
-    m_GameObjects.resize(OBJECT_TYPE_STRUCTURE + 1);
-
+    tstring Token{};
     tifstream InFile{ FileName, ios::binary };
+
+    shared_ptr<LOADED_MODEL_INFO> ModelInfo{};
+
+    UINT ObjectType{};
+    bool IsActive{};
+
+    UINT PlayerID{};
+    UINT GuardID{};
 
     while (true)
     {
@@ -324,6 +350,10 @@ void CServer::LoadSceneInfoFromFile(const tstring& FileName)
         else if (Token == TEXT("<Type>"))
         {
             ObjectType = File::ReadIntegerFromFile(InFile);
+        }
+        else if (Token == TEXT("<IsActive>"))
+        {
+            IsActive = static_cast<bool>(File::ReadIntegerFromFile(InFile));
         }
         else if (Token == TEXT("<TransformMatrix>"))
         {
@@ -567,6 +597,8 @@ bool CServer::RegisterPlayer(SOCKET Socket, const SOCKADDR_IN& SocketAddress)
     m_ClientSocketInfos[ValidID].m_Socket = Socket;
     m_ClientSocketInfos[ValidID].m_SocketAddress = SocketAddress;
 
+    SetEvent(m_ClientSyncEvents[ValidID]);
+
     return true;
 }
 
@@ -607,9 +639,9 @@ bool CServer::CheckAllPlayerReady()
     return true;
 }
 
-bool CServer::CheckGameOver()
+void CServer::CheckGameOver()
 {
-    if (!m_IsGameOver || !m_IsGameClear)
+    if (!m_IsGameOver && !m_IsGameClear)
     {
         for (const auto& GameObject : m_GameObjects[OBJECT_TYPE_PLAYER])
         {
@@ -620,26 +652,43 @@ bool CServer::CheckGameOver()
                 if (Player->GetHealth() <= 0)
                 {
                     m_IsGameOver = true;
-
-                    return true;
                 }
             }
         }
     }
     else
     {
-        m_ElapsedTimeFromGameOver += m_Timer->GetElapsedTime();
-
-        if (m_ElapsedTimeFromGameOver >= 7.0f)
+        if (m_IsGameOver)
         {
-            m_ElapsedTimeFromGameOver = 0.0f;
-            m_SceneType = SCENE_TYPE_TITLE;
+            m_ElapsedTimeFromGameOver += m_Timer->GetElapsedTime();
 
-            ResetGameData();
+            if (m_ElapsedTimeFromGameOver >= 5.0f)
+            {
+                m_ElapsedTimeFromGameOver = 0.0f;
+                m_SceneType = SCENE_TYPE_TITLE;
+
+                ResetGameData();
+            }
+        }
+        else if (m_IsGameClear)
+        {
+            m_SceneType = SCENE_TYPE_ENDING;
+
+            for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
+            {
+                if (m_GameObjects[OBJECT_TYPE_PLAYER][i])
+                {
+                    shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(m_GameObjects[OBJECT_TYPE_PLAYER][i]) };
+
+                    Player->SetLook(XMFLOAT3(0.0f, 0.0f, 1.0f));
+                    Player->SetRight(XMFLOAT3(1.0f, 0.0f, 0.0f));
+                    Player->SetUp(XMFLOAT3(0.0f, 1.0f, 0.0f));
+                    Player->SetPosition(XMFLOAT3(-5.0f + 10.0f * i, 1.05f, -45.0f - 8.0f * i));
+                    Player->GetStateMachine()->SetCurrentState(CPlayerRunningState::GetInstance());
+                }
+            }
         }
     }
-
-    return false;
 }
 
 void CServer::GameLoop()
@@ -672,6 +721,10 @@ void CServer::GameLoop()
             UpdatePlayerInfo();
             Animate(m_Timer->GetElapsedTime());
             CheckGameOver();
+            break;
+        case SCENE_TYPE_ENDING:
+            UpdatePlayerInfo();
+            Animate(m_Timer->GetElapsedTime());
             break;
         }
 
@@ -732,7 +785,9 @@ void CServer::ResetGameData()
     }
 
     m_InvincibleMode = false;
+
     m_Lights[0].m_SpotLightAngle = XMConvertToRadians(90.0f);
+    m_Lights[0].m_Direction = Vector3::Normalize(XMFLOAT3(cosf(m_Lights[0].m_SpotLightAngle), -1.0f, sinf(m_Lights[0].m_SpotLightAngle)));
 
     memset(&m_SendedPacketData, 0, sizeof(m_SendedPacketData));
     memset(&m_TriggerData, 0, sizeof(m_TriggerData));
@@ -744,10 +799,13 @@ void CServer::ResetGameData()
 
     for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
     {
+        m_ReceivedPacketData[i].m_InputMask = INPUT_MASK_NONE;
         m_ReceivedPacketData[i].m_WorldMatrix = m_GameObjects[OBJECT_TYPE_PLAYER][i]->GetWorldMatrix();
     }
 
     memset(m_ReceivedMsgTypes, 0, sizeof(m_ReceivedMsgTypes));
+
+    tcout << "========== 게임 데이터 리셋 됨 ============" << endl;
 }
 
 void CServer::ProcessInput()
@@ -767,34 +825,60 @@ void CServer::ProcessInput()
             tcout << TEXT("무적모드를 활성화합니다.") << endl;
         }
     }
+
+    if (GetAsyncKeyState('C') & 0x0001)
+    {
+        m_IsGameClear = true;
+
+        tcout << TEXT("게임을 클리어합니다.") << endl;
+    }
 }
 
 void CServer::UpdatePlayerInfo()
 {
-    for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
+    switch (m_SceneType)
     {
-        m_PlayerAttackData.m_TargetIndices[i] = UINT_MAX;
-        m_TriggerData.m_TargetIndices[i] = UINT_MAX;
-    }
-
-    for (UINT i = 0; i < MAX_NPC_COUNT; ++i)
-    {
-        m_GuardAttackData.m_TargetIndices[i] = UINT_MAX;
-    }
-
-    for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
-    {
-        if (m_GameObjects[OBJECT_TYPE_PLAYER][i])
+    case SCENE_TYPE_INGAME:
+        for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
         {
-            shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(m_GameObjects[OBJECT_TYPE_PLAYER][i]) };
+            m_PlayerAttackData.m_TargetIndices[i] = UINT_MAX;
+            m_TriggerData.m_TargetIndices[i] = UINT_MAX;
+        }
 
-            if (Player->GetHealth() > 0)
+        for (UINT i = 0; i < MAX_NPC_COUNT; ++i)
+        {
+            m_GuardAttackData.m_TargetIndices[i] = UINT_MAX;
+        }
+
+        for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
+        {
+            if (m_GameObjects[OBJECT_TYPE_PLAYER][i])
             {
-                Player->SetTransformMatrix(m_ReceivedPacketData[i].m_WorldMatrix);
-                Player->UpdateTransform(Matrix4x4::Identity());
-                Player->ProcessInput(m_Timer->GetElapsedTime(), m_ReceivedPacketData[i].m_InputMask);
+                shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(m_GameObjects[OBJECT_TYPE_PLAYER][i]) };
+
+                if (Player->GetHealth() > 0)
+                {
+                    Player->SetTransformMatrix(m_ReceivedPacketData[i].m_WorldMatrix);
+                    Player->UpdateTransform(Matrix4x4::Identity());
+                    Player->ProcessInput(m_Timer->GetElapsedTime(), m_ReceivedPacketData[i].m_InputMask);
+                }
             }
         }
+        break;
+    case SCENE_TYPE_ENDING:
+        for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
+        {
+            if (m_GameObjects[OBJECT_TYPE_PLAYER][i])
+            {
+                shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(m_GameObjects[OBJECT_TYPE_PLAYER][i]) };
+
+                if (Player->GetHealth() > 0)
+                {
+                    Player->Move(XMFLOAT3(0.0f, 0.0f, 1.0f), 7.0f * m_Timer->GetElapsedTime());
+                }
+            }
+        }
+        break;
     }
 }
 
@@ -843,71 +927,123 @@ void CServer::CalculateTowerLightCollision()
 
 		// 평면에 도달하는 점 계산
 		XMFLOAT3 LightedPosition{ Vector3::Add(m_Lights[0].m_Position , Vector3::ScalarProduct(HypotenuseLength, m_Lights[0].m_Direction, false)) };
+        XMFLOAT3 ToLightedPosition{ Vector3::Subtract(LightedPosition, XMFLOAT3{0.0f, 0.0f, 0.0f}) };
+        float ToLightedLength{ Vector3::Length(ToLightedPosition) };
 
-		for (const auto& Object : m_GameObjects[OBJECT_TYPE_PLAYER])
-		{
-			shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(Object) };
+        if (ToLightedLength < 90.0f)
+        {
+            for (const auto& Object : m_GameObjects[OBJECT_TYPE_PLAYER])
+            {
+                shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(Object) };
 
-			if (Player)
-			{
-				if (Player->GetHealth() > 0)
-				{
-					if (Math::Distance(Player->GetPosition(), LightedPosition) < Radian)
-					{
-						XMFLOAT3 Direction = Vector3::Normalize(Vector3::Subtract(Player->GetPosition(), m_Lights[0].m_Position));
+                if (Player)
+                {
+                    if (Player->GetHealth() > 0)
+                    {
+                        if (Math::Distance(Player->GetPosition(), LightedPosition) < Radian)
+                        {
+                            XMFLOAT3 Direction = Vector3::Normalize(Vector3::Subtract(Player->GetPosition(), m_Lights[0].m_Position));
 
-						float NearestHitDistance{ FLT_MAX };
-						float HitDistance{};
-						bool HitCheck{};
+                            float NearestHitDistance{ FLT_MAX };
+                            float HitDistance{};
+                            bool HitCheck{};
 
-						for (const auto& GameObject : m_GameObjects[OBJECT_TYPE_STRUCTURE])
-						{
-							if (GameObject)
-							{
-								shared_ptr<CGameObject> IntersectedObject{ GameObject->PickObjectByRayIntersection(m_Lights[0].m_Position, Direction, HitDistance, HypotenuseLength) };
+                            for (const auto& GameObject : m_GameObjects[OBJECT_TYPE_STRUCTURE])
+                            {
+                                if (GameObject)
+                                {
+                                    shared_ptr<CGameObject> IntersectedObject{ GameObject->PickObjectByRayIntersection(m_Lights[0].m_Position, Direction, HitDistance, HypotenuseLength, false) };
 
-								if (IntersectedObject && HitDistance < HypotenuseLength)
-								{
-									HitCheck = true;
-									break;
-								}
-							}
-						}
+                                    if (IntersectedObject && HitDistance < HypotenuseLength)
+                                    {
+                                        HitCheck = true;
+                                        break;
+                                    }
+                                }
+                            }
 
-						if (!HitCheck)
-						{
-							for (const auto& GameObject : m_GameObjects[OBJECT_TYPE_NPC])
-							{
-								if (GameObject)
-								{
-									shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(GameObject) };
+                            if (!HitCheck)
+                            {
+                                for (const auto& GameObject : m_GameObjects[OBJECT_TYPE_NPC])
+                                {
+                                    if (GameObject)
+                                    {
+                                        shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(GameObject) };
 
-									if (Guard->GetHealth() > 0)
-									{
-										// 스팟조명과 충돌 할 경우 주변 범위에 있는 경찰들이 플레이어를 쫒기 시작한다.
-										if (Math::Distance(LightedPosition, Guard->GetPosition()) <= 150.0f)
-										{
-											if (Guard->GetStateMachine()->IsInState(CGuardIdleState::GetInstance()) ||
-												Guard->GetStateMachine()->IsInState(CGuardPatrolState::GetInstance()) ||
-												Guard->GetStateMachine()->IsInState(CGuardReturnState::GetInstance()))
-											{
-												Guard->FindNavPath(m_NavMesh, Player->GetPosition(), m_GameObjects);
-												Guard->GetStateMachine()->ChangeState(CGuardAssembleState::GetInstance());
-											}
-										}
-									}
-								}
-							}
+                                        if (Guard->GetHealth() > 0)
+                                        {
+                                            // 스팟조명과 충돌 할 경우 주변 범위에 있는 경찰들이 플레이어를 쫒기 시작한다.
+                                            if (Math::Distance(LightedPosition, Guard->GetPosition()) <= 150.0f)
+                                            {
+                                                if (Guard->GetStateMachine()->IsInState(CGuardIdleState::GetInstance()) ||
+                                                    Guard->GetStateMachine()->IsInState(CGuardPatrolState::GetInstance()) ||
+                                                    Guard->GetStateMachine()->IsInState(CGuardReturnState::GetInstance()))
+                                                {
+                                                    Guard->FindNavPath(m_NavMesh, Player->GetPosition(), m_GameObjects);
+                                                    Guard->GetStateMachine()->ChangeState(CGuardAssembleState::GetInstance());
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
 
-							return;
-						}
-					}
-				}
-			}
-		}
+                                // 플레이어를 찾은 경우 감시탑은 플레이어를 쫓아간다
+                                XMFLOAT3 ToPlayerPosition{ Vector3::Subtract(Player->GetPosition(), XMFLOAT3{0.0f, 0.0f, 0.0f}) };
+                                float ScalarProduct{ Vector3::CrossProduct(ToPlayerPosition, ToLightedPosition, true).y };
 
-        m_Lights[0].m_SpotLightAngle += m_Timer->GetElapsedTime();
-		m_Lights[0].m_Direction = Vector3::Normalize(XMFLOAT3(cosf(m_Lights[0].m_SpotLightAngle), -1.0f, sinf(m_Lights[0].m_SpotLightAngle)));
+                                //좌우 움직임
+                                if (ScalarProduct > 0.5f)
+                                {
+                                    m_Lights[0].m_SpotLightAngle += m_Timer->GetElapsedTime() * m_Lights[0].m_Speed;
+                                }
+                                else if (ScalarProduct < -0.5f)
+                                {
+                                    m_Lights[0].m_SpotLightAngle -= m_Timer->GetElapsedTime() * m_Lights[0].m_Speed;
+                                }
+
+                                float Subtract{ ToLightedLength - Vector3::Length(ToPlayerPosition) };
+
+                                //상하 움직임
+                                if (Subtract > 1.0f)
+                                {
+                                    m_Lights[0].m_SpotLightHeightAngle -= m_Timer->GetElapsedTime() * m_Lights[0].m_Speed;
+                                }
+                                else if (Subtract < -1.0f)
+                                {
+                                    m_Lights[0].m_SpotLightHeightAngle += m_Timer->GetElapsedTime() * m_Lights[0].m_Speed;
+                                }
+
+                                m_Lights[0].m_Direction = Vector3::Normalize(XMFLOAT3(cosf(m_Lights[0].m_SpotLightAngle), m_Lights[0].m_SpotLightHeightAngle, sinf(m_Lights[0].m_SpotLightAngle)));
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        //상하 원래 위치로 돌아가기
+        if (m_Lights[0].m_SpotLightHeightAngle > -1.0f)
+        {
+            m_Lights[0].m_SpotLightHeightAngle -= m_Timer->GetElapsedTime() * m_Lights[0].m_Speed;
+
+            if (m_Lights[0].m_SpotLightHeightAngle < -1.0f)
+            {
+                m_Lights[0].m_SpotLightHeightAngle = -1.0f;
+            }
+        }
+        else if (m_Lights[0].m_SpotLightHeightAngle < -1.0f)
+        {
+            m_Lights[0].m_SpotLightHeightAngle += m_Timer->GetElapsedTime() * m_Lights[0].m_Speed;
+
+            if (m_Lights[0].m_SpotLightHeightAngle > -1.0f)
+            {
+                m_Lights[0].m_SpotLightHeightAngle = -1.0f;
+            }
+        }
+
+        m_Lights[0].m_SpotLightAngle += m_Timer->GetElapsedTime() * m_Lights[0].m_Speed;
+		m_Lights[0].m_Direction = Vector3::Normalize(XMFLOAT3(cosf(m_Lights[0].m_SpotLightAngle), m_Lights[0].m_SpotLightHeightAngle, sinf(m_Lights[0].m_SpotLightAngle)));
 	}
 }
 
@@ -952,6 +1088,25 @@ void CServer::UpdateSendedPacketData()
         {
             m_MsgType |= MSG_TYPE_GAME_CLEAR;
         }
+        break;
+    case SCENE_TYPE_ENDING:
+        if (!CheckConnection())
+        {
+            m_SceneType = SCENE_TYPE_TITLE;
+            m_MsgType = MSG_TYPE_DISCONNECTION;
+
+            ResetGameData();
+
+            break;
+        }
+
+        for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
+        {
+            m_SendedPacketData.m_PlayerWorldMatrices[i] = m_GameObjects[OBJECT_TYPE_PLAYER][i]->GetWorldMatrix();
+            m_SendedPacketData.m_PlayerAnimationClipTypes[i] = m_GameObjects[OBJECT_TYPE_PLAYER][i]->GetAnimationController()->GetAnimationClipType();
+        }
+
+        m_MsgType |= MSG_TYPE_ENDING;
         break;
     }
 

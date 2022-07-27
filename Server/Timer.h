@@ -29,5 +29,5 @@ public:
 	void Tick(float LockFPS);
 
 	float GetElapsedTime() const;
-	UINT GetFrameRate(LPTSTR Title, UINT Characters) const;
+	UINT GetFrameRate() const;
 };

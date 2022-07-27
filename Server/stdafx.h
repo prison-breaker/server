@@ -79,14 +79,15 @@ enum MSG_TYPE
 	MSG_TYPE_NONE                = 0x0000,
 	MSG_TYPE_TITLE               = 0x0001,
 	MSG_TYPE_INGAME              = 0x0002,
-	MSG_TYPE_TRIGGER             = 0x0004,
-	MSG_TYPE_PLAYER1_WEAPON_SWAP = 0x0008,
-	MSG_TYPE_PLAYER2_WEAPON_SWAP = 0x0010,
-	MSG_TYPE_PLAYER_ATTACK		 = 0x0020,
-	MSG_TYPE_GUARD_ATTACK		 = 0x0040,
-	MSG_TYPE_DISCONNECTION       = 0x0080,
-	MSG_TYPE_GAME_OVER           = 0x0100,
-	MSG_TYPE_GAME_CLEAR          = 0x0200
+	MSG_TYPE_ENDING				 = 0x0004,
+	MSG_TYPE_TRIGGER             = 0x0008,
+	MSG_TYPE_PLAYER1_WEAPON_SWAP = 0x0010,
+	MSG_TYPE_PLAYER2_WEAPON_SWAP = 0x0020,
+	MSG_TYPE_PLAYER_ATTACK		 = 0x0040,
+	MSG_TYPE_GUARD_ATTACK		 = 0x0080,
+	MSG_TYPE_DISCONNECTION       = 0x0100,
+	MSG_TYPE_GAME_OVER           = 0x0200,
+	MSG_TYPE_GAME_CLEAR          = 0x0400
 };
 
 static MSG_TYPE& operator |=(MSG_TYPE& a, MSG_TYPE b)
@@ -100,6 +101,7 @@ enum SCENE_TYPE
 {
 	SCENE_TYPE_TITLE,
 	SCENE_TYPE_INGAME,
+	SCENE_TYPE_ENDING,
 };
 
 enum OBJECT_TYPE
@@ -168,6 +170,9 @@ struct LIGHT
 	XMFLOAT3   m_Direction{};
 
 	float      m_SpotLightAngle{};
+	float      m_SpotLightHeightAngle{};
+
+	float      m_Speed{};
 };
 
 struct INIT_GAME_DATA
@@ -180,6 +185,12 @@ struct CLIENT_TO_SERVER_DATA
 {
 	UINT	   m_InputMask{};
 	XMFLOAT4X4 m_WorldMatrix{};
+};
+
+struct CAMERA_DATA
+{
+	XMFLOAT3 m_CameraPosition{};
+	XMFLOAT3 m_CameraDirection{};
 };
 
 struct PLAYER_ATTACK_DATA

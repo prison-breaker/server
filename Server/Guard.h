@@ -79,6 +79,7 @@ public:
 
 	void FindPatrolNavPath(const shared_ptr<CNavMesh>& NavMesh, const XMFLOAT3& TargetPosition);
 
+	bool IsCollidedByPlayer(const XMFLOAT3& NewPosition);
 	shared_ptr<CGameObject> IsCollidedByGuard(const XMFLOAT3& NewPosition);
 
 	void MoveToNavPath(float ElapsedTime);
