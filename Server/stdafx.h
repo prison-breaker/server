@@ -212,10 +212,10 @@ struct SERVER_TO_CLIENT_DATA
 {
 	MSG_TYPE			m_MsgType;
 
-	XMFLOAT4X4          m_PlayerWorldMatrices[MAX_PLAYER_CAPACITY]{};
+	XMFLOAT4X4          m_PlayerWorldMatrixes[MAX_PLAYER_CAPACITY]{};
 	ANIMATION_CLIP_TYPE m_PlayerAnimationClipTypes[MAX_PLAYER_CAPACITY]{};
 
-	XMFLOAT4X4          m_NPCWorldMatrices[MAX_NPC_COUNT]{};
+	XMFLOAT4X4          m_NPCWorldMatrixes[MAX_NPC_COUNT]{};
 	ANIMATION_CLIP_TYPE m_NPCAnimationClipTypes[MAX_NPC_COUNT]{};
 
 	XMFLOAT3            m_TowerLightDirection{};

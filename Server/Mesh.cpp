@@ -127,22 +127,7 @@ CSkinnedMesh::CSkinnedMesh(const CSkinnedMesh& Rhs)
 
 void CSkinnedMesh::UpdateShaderVariables()
 {
-	//if (m_D3D12BoneOffsetMatrixes)
-	//{
-	//	D3D12GraphicsCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_TYPE_BONE_OFFSET, m_D3D12BoneOffsetMatrixes->GetGPUVirtualAddress());
-	//}
 
-	//if (m_D3D12BoneTransformMatrixes)
-	//{
-	//	UINT BoneFrameCount{ static_cast<UINT>(m_BoneFrameCaches.size()) };
-
-	//	for (UINT i = 0; i < BoneFrameCount; ++i)
-	//	{
-	//		XMStoreFloat4x4(&m_MappedBoneTransformMatrixes[i], XMMatrixTranspose(XMLoadFloat4x4(&m_BoneFrameCaches[i]->GetWorldMatrix())));
-	//	}
-
-	//	D3D12GraphicsCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_TYPE_BONE_TRANSFORM, m_D3D12BoneTransformMatrixes->GetGPUVirtualAddress());
-	//}
 }
 
 void CSkinnedMesh::LoadSkinInfoFromFile(tifstream& InFile)

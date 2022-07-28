@@ -271,7 +271,7 @@ DWORD WINAPI CServer::ProcessClient(LPVOID Arg)
                 break;
             }
 
-            XMFLOAT4X4 TransformMatrixes[MAX_PLAYER_CAPACITY]{ Server->m_SendedPacketData.m_PlayerWorldMatrices[0], Server->m_SendedPacketData.m_PlayerWorldMatrices[1] };
+            XMFLOAT4X4 TransformMatrixes[MAX_PLAYER_CAPACITY]{ Server->m_SendedPacketData.m_PlayerWorldMatrixes[0], Server->m_SendedPacketData.m_PlayerWorldMatrixes[1] };
 
             ReturnValue = send(ClientSocket, (char*)TransformMatrixes, sizeof(TransformMatrixes), 0);
 
@@ -683,7 +683,7 @@ void CServer::CheckGameOver()
                     Player->SetLook(XMFLOAT3(0.0f, 0.0f, 1.0f));
                     Player->SetRight(XMFLOAT3(1.0f, 0.0f, 0.0f));
                     Player->SetUp(XMFLOAT3(0.0f, 1.0f, 0.0f));
-                    Player->SetPosition(XMFLOAT3(-5.0f + 10.0f * i, 1.05f, -45.0f - 8.0f * i));
+                    Player->SetPosition(XMFLOAT3(-5.0f + 10.0f * i, 1.05f, -45.0f - 5.0f * i));
                     Player->GetStateMachine()->SetCurrentState(CPlayerRunningState::GetInstance());
                 }
             }
@@ -1067,13 +1067,13 @@ void CServer::UpdateSendedPacketData()
 
         for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
         {
-            m_SendedPacketData.m_PlayerWorldMatrices[i] = m_GameObjects[OBJECT_TYPE_PLAYER][i]->GetWorldMatrix();
+            m_SendedPacketData.m_PlayerWorldMatrixes[i] = m_GameObjects[OBJECT_TYPE_PLAYER][i]->GetWorldMatrix();
             m_SendedPacketData.m_PlayerAnimationClipTypes[i] = m_GameObjects[OBJECT_TYPE_PLAYER][i]->GetAnimationController()->GetAnimationClipType();
         }
 
         for (UINT i = 0; i < MAX_NPC_COUNT; ++i)
         {
-            m_SendedPacketData.m_NPCWorldMatrices[i] = m_GameObjects[OBJECT_TYPE_NPC][i]->GetWorldMatrix();
+            m_SendedPacketData.m_NPCWorldMatrixes[i] = m_GameObjects[OBJECT_TYPE_NPC][i]->GetWorldMatrix();
             m_SendedPacketData.m_NPCAnimationClipTypes[i] = m_GameObjects[OBJECT_TYPE_NPC][i]->GetAnimationController()->GetAnimationClipType();
         }
 
@@ -1102,7 +1102,7 @@ void CServer::UpdateSendedPacketData()
 
         for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
         {
-            m_SendedPacketData.m_PlayerWorldMatrices[i] = m_GameObjects[OBJECT_TYPE_PLAYER][i]->GetWorldMatrix();
+            m_SendedPacketData.m_PlayerWorldMatrixes[i] = m_GameObjects[OBJECT_TYPE_PLAYER][i]->GetWorldMatrix();
             m_SendedPacketData.m_PlayerAnimationClipTypes[i] = m_GameObjects[OBJECT_TYPE_PLAYER][i]->GetAnimationController()->GetAnimationClipType();
         }
 
