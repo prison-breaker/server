@@ -30,6 +30,7 @@ private:
 
 	bool										   m_IsGameOver{};
 	float										   m_ElapsedTimeFromGameOver{};
+	float										   m_ElapsedTimeFromEnding{};
 
 	SOCKET                                         m_ListenSocket{};                           // 클라이언트를 수용하기 위한 대기 소켓
 	SOCKADDR_IN                                    m_SocketAddress{};                          // 서버의 소켓 주소 구조체
@@ -75,6 +76,7 @@ public:
 	bool CheckAllPlayerReady();
 
 	void CheckGameOver();
+	void CheckEndingOver();
 
 	void ResetGameData();
 
