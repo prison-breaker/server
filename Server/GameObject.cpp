@@ -169,12 +169,12 @@ void CGameObject::LoadAnimationInfoFromFile(tifstream& InFile, const shared_ptr<
 
 void CGameObject::Initialize()
 {
-	SetActive(true);
+
 }
 
 void CGameObject::Reset(const XMFLOAT4X4& TransformMatrix)
 {
-	SetActive(true);
+
 }
 
 void CGameObject::Animate(float ElapsedTime)

@@ -290,7 +290,7 @@ DWORD WINAPI CServer::ProcessClient(LPVOID Arg)
 
 void CServer::CreateEvents()
 {
-    m_MainSyncEvents[0] = CreateEvent(NULL, TRUE, FALSE, NULL);
+    m_MainSyncEvents[0] = CreateEvent(NULL, TRUE, TRUE, NULL);
     m_MainSyncEvents[1] = CreateEvent(NULL, TRUE, FALSE, NULL);
 
     for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
@@ -326,14 +326,12 @@ void CServer::LoadSceneInfoFromFile(const tstring& FileName)
 
     LoadMeshCachesFromFile(TEXT("MeshesAndMaterials/Meshes.bin"), MeshCaches);
 
-    tstring Token{};
     tifstream InFile{ FileName, ios::binary };
+    tstring Token{};
 
     shared_ptr<LOADED_MODEL_INFO> ModelInfo{};
 
-    UINT ObjectType{};
-    bool IsActive{};
-
+    UINT Type{};
     UINT PlayerID{};
     UINT GuardID{};
 
@@ -349,71 +347,87 @@ void CServer::LoadSceneInfoFromFile(const tstring& FileName)
         }
         else if (Token == TEXT("<Type>"))
         {
-            ObjectType = File::ReadIntegerFromFile(InFile);
+            Type = File::ReadIntegerFromFile(InFile);
         }
-        else if (Token == TEXT("<IsActive>"))
+        else if (Token == TEXT("<Instances>"))
         {
-            IsActive = static_cast<bool>(File::ReadIntegerFromFile(InFile));
-        }
-        else if (Token == TEXT("<TransformMatrix>"))
-        {
-            XMFLOAT4X4 TransformMatrix{};
+            const UINT InstanceCount{ File::ReadIntegerFromFile(InFile) };
 
-            InFile.read(reinterpret_cast<TCHAR*>(&TransformMatrix), sizeof(XMFLOAT4X4));
+            // <IsActive>
+            vector<UINT> IsActive(InstanceCount);
 
-            switch (ObjectType)
+            File::ReadStringFromFile(InFile, Token);
+            InFile.read(reinterpret_cast<TCHAR*>(IsActive.data()), sizeof(UINT) * InstanceCount);
+
+            // <TransformMatrix>
+            vector<XMFLOAT4X4> TransformMatrixes(InstanceCount);
+
+            File::ReadStringFromFile(InFile, Token);
+            InFile.read(reinterpret_cast<TCHAR*>(TransformMatrixes.data()), sizeof(XMFLOAT4X4) * InstanceCount);
+
+            switch (Type)
             {
             case OBJECT_TYPE_PLAYER:
             {
-                // 플레이어 객체를 생성한다.
-                shared_ptr<CPlayer> Player{ make_shared<CPlayer>() };
+                for (UINT i = 0; i < InstanceCount; ++i)
+                {
+                    shared_ptr<CPlayer> Player{ make_shared<CPlayer>() };
 
-                Player->SetID(PlayerID++);
-                Player->SetChild(ModelInfo->m_Model);
-                Player->SetTransformMatrix(TransformMatrix);
-                Player->UpdateTransform(Matrix4x4::Identity());
-                Player->SetAnimationController(ModelInfo);
-                Player->Initialize();
+                    Player->SetID(PlayerID++);
+                    Player->SetActive(IsActive[i]);
+                    Player->SetChild(ModelInfo->m_Model);
+                    Player->SetTransformMatrix(TransformMatrixes[i]);
+                    Player->UpdateTransform(Matrix4x4::Identity());
+                    Player->SetAnimationController(ModelInfo);
+                    Player->Initialize();
 
-                m_GameObjects[ObjectType].push_back(Player);
-                m_InitGameData.m_PlayerInitTransformMatrixes.push_back(TransformMatrix);
+                    m_GameObjects[Type].push_back(Player);
+                    m_InitGameData.m_PlayerInitTransformMatrixes.push_back(TransformMatrixes[i]);
+                }
             }
             break;
             case OBJECT_TYPE_NPC:
             {
-                XMFLOAT3 TargetPosition{};
-
                 // <TargetPosition>
+                vector<XMFLOAT3> TargetPositions(InstanceCount);
+
                 File::ReadStringFromFile(InFile, Token);
-                InFile.read(reinterpret_cast<TCHAR*>(&TargetPosition), sizeof(XMFLOAT3));
+                InFile.read(reinterpret_cast<TCHAR*>(TargetPositions.data()), sizeof(XMFLOAT3) * InstanceCount);
 
-                // 교도관 객체를 생성한다.
-                shared_ptr<CGuard> Guard{ make_shared<CGuard>() };
+                for (UINT i = 0; i < InstanceCount; ++i)
+                {
+                    shared_ptr<CGuard> Guard{ make_shared<CGuard>() };
 
-                Guard->SetID(GuardID++);
-                Guard->SetChild(ModelInfo->m_Model);
-                Guard->SetTransformMatrix(TransformMatrix);
-                Guard->UpdateTransform(Matrix4x4::Identity());
-                Guard->SetAnimationController(ModelInfo);
-                Guard->FindPatrolNavPath(m_NavMesh, TargetPosition);
-                Guard->Initialize();
+                    Guard->SetID(GuardID++);
+                    Guard->SetActive(IsActive[i]);
+                    Guard->SetChild(ModelInfo->m_Model);
+                    Guard->SetTransformMatrix(TransformMatrixes[i]);
+                    Guard->UpdateTransform(Matrix4x4::Identity());
+                    Guard->SetAnimationController(ModelInfo);
+                    Guard->FindPatrolNavPath(m_NavMesh, TargetPositions[i]);
+                    Guard->Initialize();
 
-                m_GameObjects[ObjectType].push_back(Guard);
-                m_InitGameData.m_NPCInitTransformMatrixes.push_back(TransformMatrix);
+                    m_GameObjects[Type].push_back(Guard);
+                    m_InitGameData.m_NPCInitTransformMatrixes.push_back(TransformMatrixes[i]);
+                }
             }
             break;
             case OBJECT_TYPE_TERRAIN:
             case OBJECT_TYPE_STRUCTURE:
             {
-                // 지형 및 구조물 객체를 생성한다.
-                shared_ptr<CGameObject> Architecture{ make_shared<CGameObject>() };
+                for (UINT i = 0; i < InstanceCount; ++i)
+                {
+                    // 지형 및 구조물 객체를 생성한다.
+                    shared_ptr<CGameObject> Architecture{ make_shared<CGameObject>() };
 
-                Architecture->SetChild(ModelInfo->m_Model);
-                Architecture->SetTransformMatrix(TransformMatrix);
-                Architecture->UpdateTransform(Matrix4x4::Identity());
-                Architecture->Initialize();
+                    Architecture->SetActive(IsActive[i]);
+                    Architecture->SetChild(ModelInfo->m_Model);
+                    Architecture->SetTransformMatrix(TransformMatrixes[i]);
+                    Architecture->UpdateTransform(Matrix4x4::Identity());
+                    Architecture->Initialize();
 
-                m_GameObjects[ObjectType].push_back(Architecture);
+                    m_GameObjects[Type].push_back(Architecture);
+                }
             }
             break;
             }
@@ -870,12 +884,7 @@ void CServer::UpdatePlayerInfo()
         {
             if (m_GameObjects[OBJECT_TYPE_PLAYER][i])
             {
-                shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(m_GameObjects[OBJECT_TYPE_PLAYER][i]) };
-
-                if (Player->GetHealth() > 0)
-                {
-                    Player->Move(XMFLOAT3(0.0f, 0.0f, 1.0f), 7.0f * m_Timer->GetElapsedTime());
-                }
+                m_GameObjects[OBJECT_TYPE_PLAYER][i]->Move(XMFLOAT3(0.0f, 0.0f, 1.0f), 7.0f * m_Timer->GetElapsedTime());
             }
         }
         break;
