@@ -42,6 +42,7 @@ private:
 	UINT									       m_RecentClientID{};
 
 	UINT								           m_HasPistolGuardIndices[5]{};
+	bool								           m_IsInSpotLight[MAX_PLAYER_CAPACITY]{};
 
 	CLIENT_TO_SERVER_DATA						   m_ReceivedPacketData[MAX_PLAYER_CAPACITY]{};
 	MSG_TYPE								       m_ReceivedMsgTypes[MAX_PLAYER_CAPACITY]{};

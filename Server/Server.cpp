@@ -1035,6 +1035,22 @@ void CServer::CalculateTowerLightCollision()
                                     m_Lights[0].m_SpotLightHeightAngle += m_Timer->GetElapsedTime() * m_Lights[0].m_Speed;
                                 }
 
+                                UINT PlayerID = Player->GetID();
+
+                                if (!m_IsInSpotLight[PlayerID])
+                                {
+                                    if (PlayerID == 0)
+                                    {
+                                        m_MsgType |= MSG_TYPE_PLAYER1_BGM_SWAP;
+                                    }
+                                    else
+                                    {
+                                        m_MsgType |= MSG_TYPE_PLAYER2_BGM_SWAP;
+                                    }
+
+                                    m_IsInSpotLight[PlayerID] = true;
+                                }
+
                                 m_Lights[0].m_Direction = Vector3::Normalize(XMFLOAT3(cosf(m_Lights[0].m_SpotLightAngle), m_Lights[0].m_SpotLightHeightAngle, sinf(m_Lights[0].m_SpotLightAngle)));
                                 return;
                             }
@@ -1061,6 +1077,22 @@ void CServer::CalculateTowerLightCollision()
             if (m_Lights[0].m_SpotLightHeightAngle > -1.0f)
             {
                 m_Lights[0].m_SpotLightHeightAngle = -1.0f;
+            }
+        }
+
+        for (UINT i = 0; i < MAX_PLAYER_CAPACITY; i++)
+        {
+            if (m_IsInSpotLight[i])
+            {
+                if (i == 0)
+                {
+                    m_MsgType |= MSG_TYPE_PLAYER1_BGM_SWAP;
+                }
+                else
+                {
+                    m_MsgType |= MSG_TYPE_PLAYER2_BGM_SWAP;
+                }
+                m_IsInSpotLight[i] = false;
             }
         }
 
