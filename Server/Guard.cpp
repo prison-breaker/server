@@ -21,6 +21,11 @@ void CGuard::Reset(const XMFLOAT4X4& TransformMatrix)
 
 	SetTransformMatrix(TransformMatrix);
 	UpdateTransform(Matrix4x4::Identity());
+		
+	if (!Vector3::IsEqual(GetPosition(), m_PatrolNavPath[0]))
+	{
+		reverse(m_PatrolNavPath.begin(), m_PatrolNavPath.end());
+	}
 
 	m_StateMachine->SetCurrentState(CGuardPatrolState::GetInstance());
 }
