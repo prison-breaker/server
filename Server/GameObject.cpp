@@ -255,7 +255,7 @@ shared_ptr<CGameObject> CGameObject::PickObjectByRayIntersection(const XMFLOAT3&
 						return shared_from_this();
 					}
 				}
-				else if (m_Mesh->CheckRayIntersection(RayOrigin, RayDirection, XMLoadFloat4x4(&m_WorldMatrix), HitDistance))
+				if (m_Mesh->CheckRayIntersection(RayOrigin, RayDirection, XMLoadFloat4x4(&m_WorldMatrix), HitDistance))
 				{
 					return shared_from_this();
 				}

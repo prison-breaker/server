@@ -705,6 +705,17 @@ void CServer::CheckGameOver()
     }
 }
 
+void CServer::CheckEndingOver()
+{
+    m_ElapsedTimeFromEnding += m_Timer->GetElapsedTime();
+
+    if (m_ElapsedTimeFromEnding >= 35.0f )
+    {
+        m_ElapsedTimeFromEnding = 0.0f;
+        m_SceneType = SCENE_TYPE_CREDIT;
+    }  
+}
+
 void CServer::GameLoop()
 {
     while (true)
@@ -739,6 +750,7 @@ void CServer::GameLoop()
         case SCENE_TYPE_ENDING:
             UpdatePlayerInfo();
             Animate(m_Timer->GetElapsedTime());
+            CheckEndingOver();
             break;
         }
 
@@ -809,6 +821,7 @@ void CServer::ResetGameData()
     m_IsGameOver = false;
     m_IsGameClear = false;
     m_ElapsedTimeFromGameOver = 0.0f;
+    m_ElapsedTimeFromEnding = 0.0f;
     m_RecentClientID = 0;
 
     for (UINT i = 0; i < MAX_PLAYER_CAPACITY; ++i)
@@ -1116,6 +1129,10 @@ void CServer::UpdateSendedPacketData()
         }
 
         m_MsgType |= MSG_TYPE_ENDING;
+        break;
+    case SCENE_TYPE_CREDIT:
+        m_MsgType = MSG_TYPE_CREDIT;
+        m_SceneType = SCENE_TYPE_TITLE;
         break;
     }
 
