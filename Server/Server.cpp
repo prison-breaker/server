@@ -96,6 +96,11 @@ DWORD WINAPI CServer::AcceptClient(LPVOID Arg)
             continue;
         }
 
+        // Nagle 알고리즘을 중지시킨다.
+        BOOL SocketOption{ TRUE };
+
+        setsockopt(ClientSocket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&SocketOption), sizeof(SocketOption));
+
         if (!Server->RegisterPlayer(ClientSocket, ClientAddress))
         {
             closesocket(ClientSocket);
