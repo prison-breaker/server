@@ -1170,6 +1170,8 @@ void CServer::UpdateSendedPacketData()
     case SCENE_TYPE_CREDIT:
         m_MsgType = MSG_TYPE_CREDIT;
         m_SceneType = SCENE_TYPE_TITLE;
+
+        ResetGameData();
         break;
     }
 
