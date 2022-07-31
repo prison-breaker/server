@@ -966,7 +966,7 @@ void CServer::CalculateTowerLightCollision()
         XMFLOAT3 ToLightedPosition{ Vector3::Subtract(LightedPosition, XMFLOAT3{0.0f, 0.0f, 0.0f}) };
         float ToLightedLength{ Vector3::Length(ToLightedPosition) };
 
-        if (ToLightedLength < 90.0f)
+        if (ToLightedLength < 70.0f)
         {
             for (const auto& Object : m_GameObjects[OBJECT_TYPE_PLAYER])
             {

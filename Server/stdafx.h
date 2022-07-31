@@ -168,15 +168,15 @@ struct SOCKET_INFO
 
 struct LIGHT
 {
-	bool	   m_IsActive{};
-
-	XMFLOAT3   m_Position{};
-	XMFLOAT3   m_Direction{};
-
-	float      m_SpotLightAngle{};
-	float      m_SpotLightHeightAngle{};
-
-	float      m_Speed{};
+	bool	 m_IsActive{};
+			 
+	XMFLOAT3 m_Position{};
+	XMFLOAT3 m_Direction{};
+			 
+	float    m_SpotLightAngle{};
+	float    m_SpotLightHeightAngle{};
+			 
+	float    m_Speed{};
 };
 
 struct INIT_GAME_DATA
