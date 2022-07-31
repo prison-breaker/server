@@ -1,7 +1,12 @@
 #include "stdafx.h"
 #include "Player.h"
-#include "EventTrigger.h"
+#include "State_Player.h"
 #include "Server.h"
+#include "Guard.h"
+#include "StateMachine.h"
+#include "EventTrigger.h"
+#include "NavMesh.h"
+#include "NavNode.h"
 
 void CPlayer::Initialize()
 {
@@ -277,8 +282,10 @@ bool CPlayer::IsCollidedByEventTrigger(const XMFLOAT3& NewPosition, bool IsInter
 			{
 				if (IsInteracted)
 				{
-					if (EventTriggers[i]->InteractEventTrigger(GetID()))
+					if (EventTriggers[i]->IsInActiveAngle(GetLook()))
 					{
+						EventTriggers[i]->InteractEventTrigger(GetID());
+
 						CServer::m_MsgType |= MSG_TYPE_TRIGGER;
 						CServer::m_TriggerData.m_TargetIndices[GetID()] = i;
 					}

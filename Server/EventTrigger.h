@@ -23,7 +23,7 @@ public:
 
 	virtual bool CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition);
 
-	virtual bool InteractEventTrigger(UINT CallerIndex);
+	virtual void InteractEventTrigger(UINT CallerIndex);
 	virtual void Update(float ElapsedTime);
 
 	void LoadEventTriggerFromFile(tifstream& InFile);
@@ -40,4 +40,5 @@ public:
 	shared_ptr<CGameObject> GetEventObject(UINT Index);
 
 	bool IsInTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& LookDirection);
+	bool IsInActiveAngle(const XMFLOAT3& LookDirection);
 };

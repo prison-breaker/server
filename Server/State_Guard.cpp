@@ -1,5 +1,11 @@
 #include "stdafx.h"
+#include "State_Guard.h"
 #include "Server.h"
+#include "Player.h"
+#include "State_Player.h"
+#include "Guard.h"
+#include "StateMachine.h"
+#include "AnimationController.h"
 
 CGuardIdleState* CGuardIdleState::GetInstance()
 {

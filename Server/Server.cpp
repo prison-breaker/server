@@ -1,5 +1,14 @@
 #include "stdafx.h"
 #include "Server.h"
+#include "GameObject.h"
+#include "Player.h"
+#include "Guard.h"
+#include "AnimationController.h"
+#include "StateMachine.h"
+#include "State_Player.h"
+#include "State_Guard.h"
+#include "Mesh.h"
+#include "NavMesh.h"
 
 bool									CServer::m_IsGameClear{};
 bool									CServer::m_InvincibleMode{};
@@ -714,7 +723,7 @@ void CServer::CheckEndingOver()
 {
     m_ElapsedTimeFromEnding += m_Timer->GetElapsedTime();
 
-    if (m_ElapsedTimeFromEnding >= 35.0f )
+    if (m_ElapsedTimeFromEnding >= 28.0f )
     {
         m_ElapsedTimeFromEnding = 0.0f;
         m_SceneType = SCENE_TYPE_CREDIT;
@@ -902,7 +911,7 @@ void CServer::UpdatePlayerInfo()
         {
             if (m_GameObjects[OBJECT_TYPE_PLAYER][i])
             {
-                m_GameObjects[OBJECT_TYPE_PLAYER][i]->Move(XMFLOAT3(0.0f, 0.0f, 1.0f), 7.0f * m_Timer->GetElapsedTime());
+                m_GameObjects[OBJECT_TYPE_PLAYER][i]->Move(XMFLOAT3(0.0f, 0.0f, 1.0f), 8.0f * m_Timer->GetElapsedTime());
             }
         }
         break;
@@ -1000,7 +1009,7 @@ void CServer::CalculateTowerLightCollision()
                                         if (Guard->GetHealth() > 0)
                                         {
                                             // 스팟조명과 충돌 할 경우 주변 범위에 있는 경찰들이 플레이어를 쫒기 시작한다.
-                                            if (Math::Distance(LightedPosition, Guard->GetPosition()) <= 150.0f)
+                                            if (Math::Distance(LightedPosition, Guard->GetPosition()) <= 80.0f)
                                             {
                                                 if (Guard->GetStateMachine()->IsInState(CGuardIdleState::GetInstance()) ||
                                                     Guard->GetStateMachine()->IsInState(CGuardPatrolState::GetInstance()) ||

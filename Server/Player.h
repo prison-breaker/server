@@ -1,6 +1,9 @@
 #pragma once
 #include "GameObject.h"
-#include "State_Player.h"
+
+template<typename T>
+class CStateMachine;
+class CNavMesh;
 
 class CPlayer : public CGameObject
 {

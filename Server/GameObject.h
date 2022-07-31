@@ -1,10 +1,13 @@
 #pragma once
-#include "Mesh.h"
-#include "AnimationController.h"
-#include "StateMachine.h"
-#include "NavMesh.h"
 
 class CGameObject;
+class CMesh;
+class CSkinnedMesh;
+class CMaterial;
+class CAnimationController;
+class CAnimationClip;
+class CCamera;
+class CNavMesh;
 
 struct LOADED_MODEL_INFO
 {

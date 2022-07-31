@@ -1,5 +1,9 @@
 #include "stdafx.h"
 #include "GameObject.h"
+#include "Mesh.h"
+#include "AnimationController.h"
+#include "NavMesh.h"
+#include "NavNode.h"
 
 shared_ptr<LOADED_MODEL_INFO> CGameObject::LoadObjectFromFile(const tstring& FileName, unordered_map<tstring, shared_ptr<CMesh>>& MeshCaches)
 {

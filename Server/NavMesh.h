@@ -1,5 +1,6 @@
 #pragma once
-#include "NavNode.h"
+
+class CNavNode;
 
 class CNavMesh
 {

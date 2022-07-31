@@ -1,6 +1,12 @@
 #include "stdafx.h"
 #include "Guard.h"
 #include "Server.h"
+#include "State_Guard.h"
+#include "Player.h"
+#include "StateMachine.h"
+#include "EventTrigger.h"
+#include "NavMesh.h"
+#include "NavNode.h"
 
 void CGuard::Initialize()
 {

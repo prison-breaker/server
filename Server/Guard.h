@@ -1,7 +1,8 @@
 #pragma once
 #include "GameObject.h"
-#include "State_Guard.h"
 
+template<typename T>
+class CStateMachine;
 class CEventTrigger;
 
 class CGuard : public CGameObject
@@ -19,8 +20,8 @@ private:
 	bool							  m_RecentTransition{};
 
 	float							  m_ElapsedTime{};
-	const float						  m_ToIdleEntryTime{ Random::Range(5.0f, 7.0f) };
-	const float						  m_UpdateTargetTime{ 3.0f };
+	const float						  m_ToIdleEntryTime{ Random::Range(7.0f, 10.0f) };
+	const float						  m_UpdateTargetTime{ 5.0f };
 
 	shared_ptr<CGameObject>			  m_Target{};
 	shared_ptr<CEventTrigger>		  m_EventTrigger{};

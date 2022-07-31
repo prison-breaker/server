@@ -12,16 +12,9 @@ bool CEventTrigger::CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3&
 	return true;
 }
 
-bool CEventTrigger::InteractEventTrigger(UINT CallerIndex)
+void CEventTrigger::InteractEventTrigger(UINT CallerIndex)
 {
-	if (!m_IsInteracted)
-	{
-		m_IsInteracted = true;
-
-		return true;
-	}
-
-	return false;
+	m_IsInteracted = true;
 }
 
 void CEventTrigger::Update(float ElapsedTime)
@@ -134,12 +127,19 @@ bool CEventTrigger::IsInTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& Lo
 		{
 			if (Math::IsInTriangle(m_TriggerArea[0], m_TriggerArea[i + 1], m_TriggerArea[i + 2], Position))
 			{
-				if (Vector3::Angle(LookDirection, m_ToTrigger) <= m_ActiveFOV)
-				{
-					return true;
-				}
+				return true;
 			}
 		}
+	}
+
+	return false;
+}
+
+bool CEventTrigger::IsInActiveAngle(const XMFLOAT3& LookDirection)
+{
+	if (Vector3::Angle(LookDirection, m_ToTrigger) <= m_ActiveFOV)
+	{
+		return true;
 	}
 
 	return false;

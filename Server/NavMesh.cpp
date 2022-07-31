@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "NavMesh.h"
+#include "NavNode.h"
 
 void CNavMesh::LoadNavMeshFromFile(const tstring& FileName)
 {

@@ -32,7 +32,7 @@ public:
 
 	virtual void Reset();
 
-	virtual bool InteractEventTrigger(UINT CallerIndex);
+	virtual void InteractEventTrigger(UINT CallerIndex);
 	virtual void Update(float ElapsedTime);
 };
 
@@ -44,7 +44,7 @@ public:
 	CSirenEventTrigger();
 	virtual ~CSirenEventTrigger() = default;
 
-	virtual bool InteractEventTrigger(UINT CallerIndex);
+	virtual void InteractEventTrigger(UINT CallerIndex);
 };
 
 //=========================================================================================================================
@@ -64,7 +64,7 @@ public:
 
 	virtual bool CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition);
 
-	virtual bool InteractEventTrigger(UINT CallerIndex);
+	virtual void InteractEventTrigger(UINT CallerIndex);
 	virtual void Update(float ElapsedTime);
 };
 
@@ -78,7 +78,7 @@ public:
 
 	virtual void Reset();
 
-	virtual bool InteractEventTrigger(UINT CallerIndex);
+	virtual void InteractEventTrigger(UINT CallerIndex);
 };
 
 //=========================================================================================================================
@@ -91,5 +91,5 @@ public:
 
 	virtual void Reset();
 
-	virtual bool InteractEventTrigger(UINT CallerIndex);
+	virtual void InteractEventTrigger(UINT CallerIndex);
 };

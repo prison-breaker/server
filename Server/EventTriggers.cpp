@@ -1,5 +1,9 @@
 #include "stdafx.h"
 #include "Server.h"
+#include "Player.h"
+#include "Guard.h"
+#include "StateMachine.h"
+#include "State_Guard.h"
 
 COpenDoorEventTrigger::COpenDoorEventTrigger()
 {
@@ -20,14 +24,10 @@ void COpenDoorEventTrigger::Reset()
 
 bool COpenDoorEventTrigger::CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition)
 {
-	// 문이 모두 열리지 않은 상태에서는 문 너머로 갈 수 없다.
-	if (m_DoorAngle < 70.0f)
+	// 문 너머로 넘어가는 것을 계산한다.
+	if (Math::LineIntersection(m_TriggerArea[0], m_TriggerArea[3], Position, NewPosition))
 	{
-		// 문 너머로 넘어가는 것을 계산한다.
-		if (Math::LineIntersection(m_TriggerArea[0], m_TriggerArea[3], Position, NewPosition))
-		{
-			return false;
-		}
+		return false;
 	}
 
 	// 위 경우가 아니라면, 이동이 가능하다.
@@ -70,25 +70,18 @@ void CPowerDownEventTrigger::Reset()
 	m_PanelAngle = 0.0f;
 }
 
-bool CPowerDownEventTrigger::InteractEventTrigger(UINT CallerIndex)
+void CPowerDownEventTrigger::InteractEventTrigger(UINT CallerIndex)
 {
-	if (!m_IsInteracted)
+	// 0번 플레이어만이 이 트리거를 활성화시킬 수 있다.
+	if (CallerIndex == 0)
 	{
-		// 0번 플레이어만이 이 트리거를 활성화시킬 수 있다.
-		if (CallerIndex == 0)
+		m_IsInteracted = true;
+
+		if (m_IsOpened)
 		{
-			m_IsInteracted = true;
-
-			if (m_IsOpened)
-			{
-				CServer::m_Lights[0].m_IsActive = false;
-			}
-
-			return true;
+			CServer::m_Lights[0].m_IsActive = false;
 		}
 	}
-
-	return false;
 }
 
 void CPowerDownEventTrigger::Update(float ElapsedTime)
@@ -122,49 +115,42 @@ CSirenEventTrigger::CSirenEventTrigger()
 	m_ActiveFOV = 40.0f;
 }
 
-bool CSirenEventTrigger::InteractEventTrigger(UINT CallerIndex)
+void CSirenEventTrigger::InteractEventTrigger(UINT CallerIndex)
 {
-	if (!m_IsInteracted)
+	// 1번 플레이어만이 이 트리거를 활성화시킬 수 있다.
+	if (CallerIndex == 1)
 	{
-		// 1번 플레이어만이 이 트리거를 활성화시킬 수 있다.
-		if (CallerIndex == 1)
+		m_IsInteracted = true;
+
+		vector<vector<shared_ptr<CGameObject>>>& GameObjects{ CServer::m_GameObjects };
+		shared_ptr<CNavMesh> NavMesh{ CServer::m_NavMesh };
+
+		const UINT GuardCount{ static_cast<UINT>(GameObjects[OBJECT_TYPE_NPC].size()) };
+		const XMFLOAT3 CenterPosition{ 0.5f * (m_TriggerArea[0].x + m_TriggerArea[3].x), m_TriggerArea[0].y, 0.5f * (m_TriggerArea[0].z + m_TriggerArea[1].z) };
+
+		for (UINT i = 3; i < GuardCount; ++i)
 		{
-			m_IsInteracted = true;
-
-			vector<vector<shared_ptr<CGameObject>>>& GameObjects{ CServer::m_GameObjects };
-			shared_ptr<CNavMesh> NavMesh{ CServer::m_NavMesh };
-
-			UINT GuardCount{ static_cast<UINT>(GameObjects[OBJECT_TYPE_NPC].size()) };
-			XMFLOAT3 CenterPosition{ (m_TriggerArea[0].x + m_TriggerArea[3].x) / 2.0f, m_TriggerArea[0].y, (m_TriggerArea[0].z + m_TriggerArea[1].z) / 2.0f };
-
-			for (UINT i = 3; i < GuardCount; ++i)
+			if (i == 3 || i == 5 || i == 6 || i == 9)
 			{
-				if (i == 3 || i == 5 || i == 6 || i == 8 || i == 9)
+				if (GameObjects[OBJECT_TYPE_NPC][i])
 				{
-					if (GameObjects[OBJECT_TYPE_NPC][i])
-					{
-						shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(GameObjects[OBJECT_TYPE_NPC][i]) };
+					shared_ptr<CGuard> Guard{ static_pointer_cast<CGuard>(GameObjects[OBJECT_TYPE_NPC][i]) };
 
-						if (Guard->GetHealth() > 0)
+					if (Guard->GetHealth() > 0)
+					{
+						// 사이렌을 작동시킬 경우 주변 범위에 있는 경찰들이 플레이어를 쫒기 시작한다.
+						if (Guard->GetStateMachine()->IsInState(CGuardIdleState::GetInstance()) ||
+							Guard->GetStateMachine()->IsInState(CGuardPatrolState::GetInstance()) ||
+							Guard->GetStateMachine()->IsInState(CGuardReturnState::GetInstance()))
 						{
-							// 사이렌을 작동시킬 경우 주변 범위에 있는 경찰들이 플레이어를 쫒기 시작한다.
-							if (Guard->GetStateMachine()->IsInState(CGuardIdleState::GetInstance()) ||
-								Guard->GetStateMachine()->IsInState(CGuardPatrolState::GetInstance()) ||
-								Guard->GetStateMachine()->IsInState(CGuardReturnState::GetInstance()))
-							{
-								Guard->FindNavPath(NavMesh, CenterPosition, GameObjects);
-								Guard->GetStateMachine()->ChangeState(CGuardAssembleState::GetInstance());
-							}
+							Guard->FindNavPath(NavMesh, CenterPosition, GameObjects);
+							Guard->GetStateMachine()->ChangeState(CGuardAssembleState::GetInstance());
 						}
 					}
 				}
 			}
-
-			return true;
 		}
 	}
-
-	return false;
 }
 
 //=========================================================================================================================
@@ -189,41 +175,30 @@ void COpenGateEventTrigger::Reset()
 
 bool COpenGateEventTrigger::CanPassTriggerArea(const XMFLOAT3& Position, const XMFLOAT3& NewPosition)
 {
-	// 게이트가 모두 열리지 않은 상태에서는 게이트 너머로 갈 수 없다.
-	if (m_GateAngle < 120.0f)
+	// 게이트 너머로 넘어가는 것을 계산한다.
+	if (Math::LineIntersection(m_TriggerArea[0], m_TriggerArea[3], Position, NewPosition))
 	{
-		// 게이트 너머로 넘어가는 것을 계산한다.
-		if (Math::LineIntersection(m_TriggerArea[0], m_TriggerArea[3], Position, NewPosition))
-		{
-			return false;
-		}
+		return false;
 	}
 
 	// 위 경우가 아니라면, 이동이 가능하다.
 	return true;
 }
 
-bool COpenGateEventTrigger::InteractEventTrigger(UINT CallerIndex)
+void COpenGateEventTrigger::InteractEventTrigger(UINT CallerIndex)
 {
-	if (!m_IsInteracted)
+	vector<vector<shared_ptr<CGameObject>>>& GameObjects{ CServer::m_GameObjects };
+	shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(GameObjects[OBJECT_TYPE_PLAYER][CallerIndex]) };
+
+	if (Player->HasKey() && !m_UsedKeyIndices[CallerIndex])
 	{
-		vector<vector<shared_ptr<CGameObject>>>& GameObjects{ CServer::m_GameObjects };
-		shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(GameObjects[OBJECT_TYPE_PLAYER][CallerIndex]) };
+		m_UsedKeyIndices[CallerIndex] = true;
 
-		if (Player->HasKey() && !m_UsedKeyIndices[CallerIndex])
+		if (m_UsedKeyIndices[0] && m_UsedKeyIndices[1])
 		{
-			m_UsedKeyIndices[CallerIndex] = true;
-
-			if (m_UsedKeyIndices[0] && m_UsedKeyIndices[1])
-			{
-				m_IsInteracted = true;
-			}
-
-			return true;
+			m_IsInteracted = true;
 		}
 	}
-
-	return false;
 }
 
 void COpenGateEventTrigger::Update(float ElapsedTime)
@@ -259,26 +234,19 @@ void CGetPistolEventTrigger::Reset()
 	m_IsActive = false;
 }
 
-bool CGetPistolEventTrigger::InteractEventTrigger(UINT CallerIndex)
+void CGetPistolEventTrigger::InteractEventTrigger(UINT CallerIndex)
 {
-	if (!m_IsInteracted)
+	m_IsInteracted = true;
+
+	vector<vector<shared_ptr<CGameObject>>>& GameObjects{ CServer::m_GameObjects };
+	shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(GameObjects[OBJECT_TYPE_PLAYER][CallerIndex]) };
+
+	if (!Player->HasPistol())
 	{
-		m_IsInteracted = true;
-
-		vector<vector<shared_ptr<CGameObject>>>& GameObjects{ CServer::m_GameObjects };
-		shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(GameObjects[OBJECT_TYPE_PLAYER][CallerIndex]) };
-
-		if (!Player->HasPistol())
-		{
-			Player->ManagePistol(true);
-		}
-
-		Player->SwapWeapon(WEAPON_TYPE_PISTOL);
-
-		return true;
+		Player->ManagePistol(true);
 	}
 
-	return false;
+	Player->SwapWeapon(WEAPON_TYPE_PISTOL);
 }
 
 //=========================================================================================================================
@@ -295,18 +263,9 @@ void CGetKeyEventTrigger::Reset()
 	m_IsActive = false;
 }
 
-bool CGetKeyEventTrigger::InteractEventTrigger(UINT CallerIndex)
+void CGetKeyEventTrigger::InteractEventTrigger(UINT CallerIndex)
 {
-	if (!m_IsInteracted)
-	{
-		m_IsInteracted = true;
+	m_IsInteracted = true;
 
-		shared_ptr<CPlayer> Player{ static_pointer_cast<CPlayer>(CServer::m_GameObjects[OBJECT_TYPE_PLAYER][CallerIndex]) };
-
-		Player->ManageKey(true);
-
-		return true;
-	}
-
-	return false;
+	static_pointer_cast<CPlayer>(CServer::m_GameObjects[OBJECT_TYPE_PLAYER][CallerIndex])->ManageKey(true);
 }
